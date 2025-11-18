@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    {
+      "source": "/gem/:id*",
+      "destination": "/gem/[id]"
+    }
+  ],
+  "cleanUrls": false,
+  "trailingSlash": true
+}
+
