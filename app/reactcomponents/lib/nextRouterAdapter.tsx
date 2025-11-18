@@ -12,11 +12,11 @@ import {
 type To =
   | string
   | {
-      pathname?: string;
-      query?: Record<string, string | number | boolean | undefined>;
-      hash?: string;
-      search?: string;
-    };
+    pathname?: string;
+    query?: Record<string, string | number | boolean | undefined>;
+    hash?: string;
+    search?: string;
+  };
 
 const toHref = (to: To): string => {
   if (typeof to === "string") {
@@ -52,9 +52,9 @@ type LinkProps = {
 export function Link({ to, replace, scroll = true, children, ...rest }: LinkProps) {
   const href = toHref(to);
   return (
-    <NextLink 
-      href={href} 
-      replace={replace} 
+    <NextLink
+      href={href}
+      replace={replace}
       scroll={scroll}
       prefetch={false}
       {...rest}
@@ -129,7 +129,22 @@ export function useSearchParams() {
 }
 
 export function useParams<T extends Record<string, string>>() {
-  return useNextParams() as unknown as T;
+  const nextParams = useNextParams();
+  // Handle catch-all routes where params might be arrays
+  // Convert arrays to strings (take first element or join)
+  const params = useMemo(() => {
+    const result: Record<string, string> = {};
+    Object.entries(nextParams || {}).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        // For catch-all routes, use the first element or join with '/'
+        result[key] = value[0] || value.join('/');
+      } else if (value !== undefined && value !== null) {
+        result[key] = String(value);
+      }
+    });
+    return result as T;
+  }, [nextParams]);
+  return params;
 }
 
 type NavigateComponentProps = {
