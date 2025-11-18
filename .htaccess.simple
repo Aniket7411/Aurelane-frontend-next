@@ -1,0 +1,12 @@
+# Simplified .htaccess for Hostinger (use this if the main one doesn't work)
+# Rename this file to .htaccess if you have issues
+
+RewriteEngine On
+RewriteBase /
+
+# Handle Next.js client-side routing
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/_next/
+RewriteRule ^(.*)$ /index.html [L]
+
