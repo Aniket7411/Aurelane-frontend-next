@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "../../lib/nextRouterAdapter";
 import { CiSearch } from "react-icons/ci";
 import { FaBars, FaTimes, FaHeart, FaChevronDown, FaUser, FaBox, FaSignOutAlt, FaCog, FaSearch } from "react-icons/fa";
@@ -9,6 +10,126 @@ import { gemAPI } from "../../services/api";
 import { useCart } from "../../contexts/CartContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { CgProfile } from "react-icons/cg";
+
+const gemstoneMenuSections = [
+  {
+    title: "Navratna",
+    highlight: "text-emerald-600",
+    items: [
+      { label: "Blue Sapphire (Neelam)", category: "Blue Sapphire" },
+      { label: "Yellow Sapphire (Pukhraj)", category: "Yellow Sapphire" },
+      { label: "Ruby (Manik)", category: "Ruby" },
+      { label: "Emerald (Panna)", category: "Emerald" },
+      { label: "Diamond (Heera)", category: "Diamond" },
+      { label: "Pearl (Moti)", category: "Pearl" },
+      { label: "Red Coral (Moonga)", category: "Red Coral" },
+      { label: "Gomed (Hessonite)", category: "Gomed" },
+      { label: "Cat's Eye (Lehsunia)", category: "Cat's Eye" },
+    ],
+  },
+  {
+    title: "Exclusive Gemstones",
+    highlight: "text-blue-600",
+    items: [
+      { label: "Alexandrite", category: "Alexandrite" },
+      { label: "Basra Pearl", category: "Basra Pearl" },
+      { label: "Burma Ruby", category: "Burma Ruby" },
+      { label: "Zambian Emerald", category: "Zambian Emerald" },
+      { label: "Tanzanite", category: "Tanzanite" },
+      { label: "Paraiba Tourmaline", category: "Paraiba Tourmaline" },
+    ],
+  },
+  {
+    title: "Sapphire",
+    highlight: "text-indigo-600",
+    items: [
+      { label: "Bi-Colour Sapphire (Pitambari)", category: "Pitambari Sapphire" },
+      { label: "Blue Sapphire (Neelam)", category: "Blue Sapphire" },
+      { label: "Color Change Sapphire", category: "Color Change Sapphire" },
+      { label: "Pink Sapphire", category: "Pink Sapphire" },
+      { label: "Yellow Sapphire", category: "Yellow Sapphire" },
+    ],
+  },
+  {
+    title: "More Vedic Ratna (Upratan)",
+    highlight: "text-purple-600",
+    items: [
+      { label: "Amethyst", category: "Amethyst" },
+      { label: "Aquamarine", category: "Aquamarine" },
+      { label: "Blue Topaz", category: "Blue Topaz" },
+      { label: "Peridot", category: "Peridot" },
+      { label: "Garnet", category: "Garnet" },
+    ],
+  },
+  {
+    title: "Specific Collections",
+    highlight: "text-rose-600",
+    items: [
+      { label: "Gemstone Pairs", category: "Gemstone Pair" },
+      { label: "Gemstone Set", category: "Gemstone Set" },
+      { label: "GRS Certified Gemstones", category: "GRS Certified" },
+      { label: "Investment Grade Gems", category: "Investment Grade" },
+    ],
+  },
+];
+
+const birthstoneMenuSections = [
+  {
+    title: "Quarter 1",
+    highlight: "text-sky-600",
+    items: [
+      { label: "January Birthstone", birthMonth: "January" },
+      { label: "February Birthstone", birthMonth: "February" },
+      { label: "March Birthstone", birthMonth: "March" },
+    ],
+  },
+  {
+    title: "Quarter 2",
+    highlight: "text-teal-600",
+    items: [
+      { label: "April Birthstone", birthMonth: "April" },
+      { label: "May Birthstone", birthMonth: "May" },
+      { label: "June Birthstone", birthMonth: "June" },
+    ],
+  },
+  {
+    title: "Quarter 3",
+    highlight: "text-amber-600",
+    items: [
+      { label: "July Birthstone", birthMonth: "July" },
+      { label: "August Birthstone", birthMonth: "August" },
+      { label: "September Birthstone", birthMonth: "September" },
+    ],
+  },
+  {
+    title: "Quarter 4",
+    highlight: "text-pink-600",
+    items: [
+      { label: "October Birthstone", birthMonth: "October" },
+      { label: "November Birthstone", birthMonth: "November" },
+      { label: "December Birthstone", birthMonth: "December" },
+    ],
+  },
+];
+
+const getCategoryFilterValue = (item) => {
+  if (!item) {
+    return undefined;
+  }
+
+  const { category, label } = item;
+
+  if (category) {
+    if (category.includes("(")) {
+      return category;
+    }
+    if (!label?.includes("(")) {
+      return category;
+    }
+  }
+
+  return label;
+};
 
 const Header = () => {
   const navigate = useNavigate();
@@ -22,8 +143,10 @@ const Header = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [activeMegaMenu, setActiveMegaMenu] = useState(null);
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
+  const megaMenuTimeout = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -36,6 +159,51 @@ const Header = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (megaMenuTimeout.current) {
+        clearTimeout(megaMenuTimeout.current);
+      }
+    };
+  }, []);
+
+  const openMegaMenu = (menu) => {
+    if (megaMenuTimeout.current) {
+      clearTimeout(megaMenuTimeout.current);
+    }
+    setActiveMegaMenu(menu);
+  };
+
+  const closeMegaMenuWithDelay = () => {
+    if (megaMenuTimeout.current) {
+      clearTimeout(megaMenuTimeout.current);
+    }
+    megaMenuTimeout.current = setTimeout(() => setActiveMegaMenu(null), 120);
+  };
+
+  const buildShopQueryString = (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (typeof value === "string" && value.trim() === "") return;
+      params.set(key, value);
+    });
+    return params.toString();
+  };
+
+  const navigateToShop = (filters = {}) => {
+    const queryString = buildShopQueryString(filters);
+    const path = queryString ? `/shop?${queryString}` : "/shop";
+    navigate(path);
+    setActiveMegaMenu(null);
+    setMobileMenuOpen(false);
+    setSearchBarOpen(false);
+  };
+
+  const handleMegaMenuNavigation = ({ category, birthMonth, query } = {}) => {
+    navigateToShop({ category, birthMonth, query });
+  };
 
   const handleLogout = () => {
     logout();
@@ -70,18 +238,14 @@ const Header = () => {
   const handleSearchSelect = (gem) => {
     setSearchTerm(gem);
     setSuggestions([]);
-    setMobileMenuOpen(false);
-    setSearchBarOpen(false);
-    navigate({ pathname: "/shop", search: `query=${encodeURIComponent(gem)}` });
+    navigateToShop({ query: gem });
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
       setSuggestions([]);
-      setMobileMenuOpen(false);
-      setSearchBarOpen(false);
-      navigate({ pathname: "/shop", search: `query=${encodeURIComponent(searchTerm.trim())}` });
+      navigateToShop({ query: searchTerm.trim() });
     }
   };
 
@@ -230,7 +394,118 @@ const Header = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden md:flex items-center space-x-1 relative">
+            {/* <Link
+              to="/"
+              className="relative px-4 py-2 text-gray-700 hover:text-emerald-600 font-medium transition-all duration-200 rounded-lg hover:bg-emerald-50 group"
+            >
+              Home
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-emerald-500 to-blue-500 group-hover:w-full transition-all duration-300"></span>
+            </Link> */}
+
+            {/* Gemstones Mega Menu */}
+            <div
+              className="relative"
+              onMouseEnter={() => openMegaMenu("gemstones")}
+              onMouseLeave={closeMegaMenuWithDelay}
+            >
+              <button
+                type="button"
+                className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${activeMegaMenu === "gemstones" ? "text-emerald-600 bg-emerald-50 shadow-sm" : "text-gray-700 hover:text-emerald-600 hover:bg-emerald-50"}`}
+              >
+                Gemstones
+                <FaChevronDown className={`w-3 h-3 transition-transform duration-200 ${activeMegaMenu === "gemstones" ? "rotate-180" : ""}`} />
+              </button>
+
+              <AnimatePresence>
+                {activeMegaMenu === "gemstones" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="fixed left-1/2 top-[108px] -translate-x-1/2 w-[min(1100px,calc(100vw-2rem))] px-4 z-[70]"
+                    onMouseEnter={() => openMegaMenu("gemstones")}
+                    onMouseLeave={closeMegaMenuWithDelay}
+                  >
+                    <div className="rounded-[32px] border border-slate-200 bg-gradient-to-b from-white via-white/95 to-white shadow-[0px_25px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
+                      {gemstoneMenuSections.map((section) => (
+                        <div key={section.title} className="space-y-3">
+                          <p className={`text-xs font-semibold tracking-[0.08em] uppercase ${section.highlight}`}>{section.title}</p>
+                          <ul className="rounded-2xl border border-slate-100 divide-y divide-slate-100 overflow-hidden bg-white/70 shadow-inner">
+                            {section.items.map((item) => {
+                              const categoryValue = getCategoryFilterValue(item);
+                              return (
+                                <li key={item.label}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMegaMenuNavigation({ category: categoryValue, query: item.query })}
+                                    className="w-full text-left text-sm text-slate-600 hover:text-emerald-600 hover:bg-gradient-to-r hover:from-emerald-50/70 hover:to-blue-50/70 px-4 py-2.5 transition-all duration-200 font-medium"
+                                  >
+                                    {item.label}
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Birthstones Mega Menu */}
+            <div
+              className="relative"
+              onMouseEnter={() => openMegaMenu("birthstones")}
+              onMouseLeave={closeMegaMenuWithDelay}
+            >
+              <button
+                type="button"
+                className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${activeMegaMenu === "birthstones" ? "text-emerald-600 bg-emerald-50 shadow-sm" : "text-gray-700 hover:text-emerald-600 hover:bg-emerald-50"}`}
+              >
+                Birthstones
+                <FaChevronDown className={`w-3 h-3 transition-transform duration-200 ${activeMegaMenu === "birthstones" ? "rotate-180" : ""}`} />
+              </button>
+
+              <AnimatePresence>
+                {activeMegaMenu === "birthstones" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="fixed left-1/2 top-[108px] -translate-x-1/2 w-[min(900px,calc(100vw-2rem))] px-4 z-[70]"
+                    onMouseEnter={() => openMegaMenu("birthstones")}
+                    onMouseLeave={closeMegaMenuWithDelay}
+                  >
+                    <div className="rounded-[32px] border border-slate-200 bg-gradient-to-b from-white via-white/95 to-white shadow-[0px_25px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                      {birthstoneMenuSections.map((section) => (
+                        <div key={section.title} className="space-y-3">
+                          <p className={`text-xs font-semibold tracking-[0.08em] uppercase ${section.highlight}`}>{section.title}</p>
+                          <ul className="rounded-2xl border border-slate-100 divide-y divide-slate-100 overflow-hidden bg-white/70 shadow-inner">
+                            {section.items.map((item) => (
+                              <li key={item.label}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMegaMenuNavigation({ birthMonth: item.birthMonth })}
+                                  className="w-full text-left text-sm text-slate-600 hover:text-emerald-600 hover:bg-gradient-to-r hover:from-emerald-50/70 hover:to-blue-50/70 px-4 py-2.5 transition-all duration-200 font-medium"
+                                >
+                                  {item.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <Link
               to="/shop"
               className="relative px-4 py-2 text-gray-700 hover:text-emerald-600 font-medium transition-all duration-200 rounded-lg hover:bg-emerald-50 group"

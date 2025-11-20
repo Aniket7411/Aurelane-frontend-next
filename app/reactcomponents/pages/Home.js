@@ -7,6 +7,7 @@ import GemsCarousel from './homepage/gemscarausel';
 import RingSection from './homepage/ringsection';
 import GemInquirySection from './homepage/topcarausel';
 import TestimonialCarousel from './homepage/testimonialcarousel';
+import GemImagesCarousel from '../components/gems/GemImagesCarousel';
 
 const Home = () => {
     return (
@@ -18,6 +19,7 @@ const Home = () => {
 
             <RingSection />
             <GemCards />
+            <GemImagesCarousel />
 
             <TestimonialCarousel />
 

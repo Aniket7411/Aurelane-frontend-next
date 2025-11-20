@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { gemAPI, wishlistAPI } from '../services/api';
@@ -41,9 +41,24 @@ const birthMonths = [
     'December'
 ];
 
+const parseCategoryParam = (rawValue) => {
+    if (!rawValue) return [];
+    return rawValue
+        .split(',')
+        .map((item) => decodeURIComponent(item).trim())
+        .filter(Boolean);
+};
+
+const arraysAreEqual = (a = [], b = []) => {
+    if (a.length !== b.length) return false;
+    return a.every((value, index) => value === b[index]);
+};
+
 const Shop = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const currentSearchString = searchParams.toString();
+    const lastSyncedQueryRef = React.useRef(currentSearchString);
     const { addToCart } = useCart();
     const { isAuthenticated } = useAuth();
     const { showSuccess, showError, showWarning } = useToast();
@@ -56,45 +71,59 @@ const Shop = () => {
     const [loadingWishlist, setLoadingWishlist] = useState(false);
 
     // Filter states
+    const initialSearch = searchParams.get('query') || '';
+    const initialCategories = parseCategoryParam(searchParams.get('category'));
+    const initialBirthMonth = searchParams.get('birthMonth') || '';
+
     const [filters, setFilters] = useState({
         page: 1,
         limit: 12,
-        search: searchParams.get('query') || '',
-        category: [], // Multiple categories
+        search: initialSearch,
+        category: initialCategories, // Multiple categories
         minPrice: '',
         maxPrice: '',
         sort: 'newest',
-        birthMonth: ''
+        birthMonth: initialBirthMonth
     });
 
     // Temporary filter inputs (before apply)
     const [tempFilters, setTempFilters] = useState({
-        search: searchParams.get('query') || '',
-        category: [],
+        search: initialSearch || '',
+        category: initialCategories,
         minPrice: '',
         maxPrice: '',
         sort: 'newest',
-        birthMonth: ''
+        birthMonth: initialBirthMonth
     });
 
+    const {
+        page,
+        limit,
+        search,
+        category: categoryFilter,
+        minPrice,
+        maxPrice,
+        sort,
+        birthMonth
+    } = filters;
+
+    const categoryKey = categoryFilter.join('|');
+
     // Fetch gems
-    const fetchGems = async () => {
+    const fetchGems = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
 
-            // Build query params
             const params = {};
-            if (filters.page) params.page = filters.page;
-            if (filters.limit) params.limit = filters.limit;
-            if (filters.search) params.search = filters.search;
-            if (filters.category && filters.category.length > 0) {
-                params.category = filters.category.join(','); // Convert array to comma-separated string
-            }
-            if (filters.minPrice) params.minPrice = filters.minPrice;
-            if (filters.maxPrice) params.maxPrice = filters.maxPrice;
-            if (filters.sort) params.sort = filters.sort;
-            if (filters.birthMonth) params.birthMonth = filters.birthMonth;
+            if (page) params.page = page;
+            if (limit) params.limit = limit;
+            if (search) params.search = search;
+            if (categoryKey) params.category = categoryKey.split('|').join(',');
+            if (minPrice) params.minPrice = minPrice;
+            if (maxPrice) params.maxPrice = maxPrice;
+            if (sort) params.sort = sort;
+            if (birthMonth) params.birthMonth = birthMonth;
 
             const response = await gemAPI.getGems(params);
 
@@ -112,10 +141,10 @@ const Shop = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey]);
 
     // Fetch categories
-    const fetchCategories = async () => {
+    const fetchCategories = useCallback(async () => {
         try {
             const response = await gemAPI.getGemCategories();
             if (response.success) {
@@ -124,11 +153,14 @@ const Shop = () => {
         } catch (err) {
             console.error('Error fetching categories:', err);
         }
-    };
+    }, []);
 
     // Fetch wishlist
-    const fetchWishlist = async () => {
-        if (!isAuthenticated) return;
+    const fetchWishlist = useCallback(async () => {
+        if (!isAuthenticated) {
+            setWishlist(new Set());
+            return;
+        }
 
         try {
             setLoadingWishlist(true);
@@ -144,14 +176,94 @@ const Shop = () => {
         } finally {
             setLoadingWishlist(false);
         }
-    };
+    }, [isAuthenticated]);
+    const filtersKey = useMemo(() => JSON.stringify({
+        page,
+        limit,
+        search,
+        minPrice,
+        maxPrice,
+        sort,
+        birthMonth,
+        categoryKey
+    }), [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey]);
 
-    // Initial load
+    const lastFetchKeyRef = useRef('');
+
+    // Initial load / refetch on filter changes
     useEffect(() => {
+        if (lastFetchKeyRef.current === filtersKey) {
+            return;
+        }
+        lastFetchKeyRef.current = filtersKey;
         fetchGems();
+    }, [filtersKey, fetchGems]);
+
+    useEffect(() => {
         fetchCategories();
+    }, [fetchCategories]);
+
+    useEffect(() => {
         fetchWishlist();
-    }, [filters, isAuthenticated]);
+    }, [fetchWishlist]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(currentSearchString);
+        const updatedSearch = params.get('query') || '';
+        const updatedCategories = parseCategoryParam(params.get('category'));
+        const updatedBirthMonth = params.get('birthMonth') || '';
+
+        setFilters(prev => {
+            const isSameSearch = prev.search === updatedSearch;
+            const isSameCategories = arraysAreEqual(prev.category, updatedCategories);
+            const isSameBirthMonth = prev.birthMonth === updatedBirthMonth;
+
+            if (isSameSearch && isSameCategories && isSameBirthMonth) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                search: updatedSearch,
+                category: updatedCategories,
+                birthMonth: updatedBirthMonth,
+                page: 1
+            };
+        });
+
+        setTempFilters(prev => {
+            const isSameSearch = prev.search === updatedSearch;
+            const isSameCategories = arraysAreEqual(prev.category, updatedCategories);
+            const isSameBirthMonth = prev.birthMonth === updatedBirthMonth;
+
+            if (isSameSearch && isSameCategories && isSameBirthMonth) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                search: updatedSearch,
+                category: updatedCategories,
+                birthMonth: updatedBirthMonth
+            };
+        });
+
+        lastSyncedQueryRef.current = currentSearchString;
+    }, [currentSearchString]);
+
+    useEffect(() => {
+        const params = new URLSearchParams();
+        if (filters.search) params.set('query', filters.search);
+        if (filters.category && filters.category.length > 0) params.set('category', filters.category.join(','));
+        if (filters.birthMonth) params.set('birthMonth', filters.birthMonth);
+
+        const nextQuery = params.toString();
+        if (lastSyncedQueryRef.current === nextQuery) {
+            return;
+        }
+        lastSyncedQueryRef.current = nextQuery;
+        navigate(nextQuery ? `/shop?${nextQuery}` : '/shop', { replace: true });
+    }, [filters.search, filters.category, filters.birthMonth, navigate]);
 
     // Handle apply filters
     const handleApplyFilters = () => {
@@ -690,7 +802,7 @@ const Shop = () => {
                                 ) : (
                                     <motion.div
                                         layout
-                                        className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mb-6 sm:mb-8"
+                                        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mb-6 sm:mb-8"
                                     >
                                         <AnimatePresence>
                                             {gems.map((gem) => (
