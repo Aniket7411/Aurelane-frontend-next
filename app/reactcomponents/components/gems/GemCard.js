@@ -6,9 +6,9 @@ import { motion } from 'framer-motion';
 import { FaHeart, FaShoppingCart, FaEye, FaStar, FaPhone } from 'react-icons/fa';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
-const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false }) => {
+const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hideActions = false }) => {
     const { formatPrice } = useCurrency();
-    
+
     const calculatePrice = () => {
         if (gem.discount && gem.discount > 0) {
             const discountAmount = gem.discountType === 'percentage'
@@ -178,42 +178,46 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false }) =
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex space-x-1.5 sm:space-x-2 mt-auto">
-                    {gem.contactForPrice ? (
-                        <a
-                            href="tel:9999888800"
-                            className="flex-1 py-1.5 sm:py-2 px-2 sm:px-3 md:px-4 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-105"
-                        >
-                            <FaPhone className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                            <span className="truncate">Contact</span>
-                        </a>
-                    ) : (
-                        <button
-                            onClick={() => onAddToCart && onAddToCart(gem)}
-                            disabled={!gem.availability}
-                            className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 md:px-4 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 ${gem.availability
-                                ? 'bg-emerald-600 text-white hover:bg-emerald-700 transform hover:scale-105'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
-                        >
-                            <FaShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                            <span className="truncate">{gem.availability ? 'Add to Cart' : 'Out of Stock'}</span>
-                        </button>
-                    )}
-                </div>
+                {!hideActions && (
+                    <div className="flex space-x-1.5 sm:space-x-2 mt-auto">
+                        {gem.contactForPrice ? (
+                            <a
+                                href="tel:9999888800"
+                                className="flex-1 py-1.5 sm:py-2 px-2 sm:px-3 md:px-4 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-105"
+                            >
+                                <FaPhone className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                                <span className="truncate">Contact</span>
+                            </a>
+                        ) : (
+                            <button
+                                onClick={() => onAddToCart && onAddToCart(gem)}
+                                disabled={!gem.availability}
+                                className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 md:px-4 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 ${gem.availability
+                                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 transform hover:scale-105'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                            >
+                                <FaShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                                <span className="truncate">{gem.availability ? 'Add to Cart' : 'Out of Stock'}</span>
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Additional Info */}
-                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm text-gray-500 gap-2">
-                        <span className="truncate flex-1 min-w-0">
-                            {gem.sizeWeight && gem.sizeUnit ? `${gem.sizeWeight} ${gem.sizeUnit}` : 'Premium Quality'}
-                        </span>
-                        <span className="flex items-center space-x-1 flex-shrink-0">
-                            <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${gem.availability ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                            <span className="whitespace-nowrap">{gem.availability ? 'Available' : 'Unavailable'}</span>
-                        </span>
+                {!hideActions && (
+                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm text-gray-500 gap-2">
+                            <span className="truncate flex-1 min-w-0">
+                                {gem.sizeWeight && gem.sizeUnit ? `${gem.sizeWeight} ${gem.sizeUnit}` : 'Premium Quality'}
+                            </span>
+                            <span className="flex items-center space-x-1 flex-shrink-0">
+                                <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${gem.availability ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                <span className="whitespace-nowrap">{gem.availability ? 'Available' : 'Unavailable'}</span>
+                            </span>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </motion.div>
     );

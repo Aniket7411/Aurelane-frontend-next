@@ -917,6 +917,7 @@ const GemDetail = () => {
                                     onAddToCart={handleRelatedProductAddToCart}
                                     onToggleWishlist={handleRelatedProductWishlist}
                                     isWishlisted={false}
+                                    hideActions={true}
                                 />
                             ))}
                         </div>
