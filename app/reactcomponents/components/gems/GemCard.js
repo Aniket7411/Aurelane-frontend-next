@@ -4,8 +4,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaHeart, FaShoppingCart, FaEye, FaStar, FaPhone } from 'react-icons/fa';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false }) => {
+    const { formatPrice } = useCurrency();
+    
     const calculatePrice = () => {
         if (gem.discount && gem.discount > 0) {
             const discountAmount = gem.discountType === 'percentage'
@@ -14,14 +17,6 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false }) =
             return gem.price - discountAmount;
         }
         return gem.price;
-    };
-
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0,
-        }).format(price);
     };
 
     const getGemEmoji = (category) => {
@@ -87,7 +82,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false }) =
                 <div className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 flex flex-col gap-1.5 sm:gap-2">
                     {gem.discount && gem.discount > 0 && (
                         <span className="bg-red-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold whitespace-nowrap">
-                            {gem.discountType === 'percentage' ? `${gem.discount}% OFF` : `₹${gem.discount} OFF`}
+                            {gem.discountType === 'percentage' ? `${gem.discount}% OFF` : `${formatPrice(gem.discount)} OFF`}
                         </span>
                     )}
                     {!gem.availability && (

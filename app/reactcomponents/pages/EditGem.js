@@ -704,8 +704,9 @@ const EditGem = () => {
                                             className="px-3 py-2 border-t border-r border-b border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         >
                                             <option value="carat">Carat</option>
+                                            <option value="rati">Rati</option>
                                             <option value="gram">Gram</option>
-                                            <option value="ratti">Ratti</option>
+                                            <option value="ounce">Ounce</option>
                                         </select>
                                     </div>
                                 </div>

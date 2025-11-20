@@ -4,11 +4,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "../../lib/nextRouterAdapter";
 import { CiSearch } from "react-icons/ci";
-import { FaBars, FaTimes, FaHeart, FaChevronDown, FaUser, FaBox, FaSignOutAlt, FaCog, FaSearch } from "react-icons/fa";
+import { FaBars, FaTimes, FaHeart, FaChevronDown, FaUser, FaBox, FaSignOutAlt, FaCog, FaSearch, FaDollarSign, FaEuroSign, FaPoundSign, FaRupeeSign, FaCheck } from "react-icons/fa";
 import { FaShoppingCart } from "react-icons/fa";
 import { gemAPI } from "../../services/api";
 import { useCart } from "../../contexts/CartContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { useCurrency, CURRENCIES } from "../../contexts/CurrencyContext";
 import { CgProfile } from "react-icons/cg";
 
 const gemstoneMenuSections = [
@@ -135,6 +136,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { getCartItemCount } = useCart();
+  const { selectedCurrency, setSelectedCurrency, getCurrencyInfo } = useCurrency();
   const cartItemCount = getCartItemCount();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -143,16 +145,21 @@ const Header = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState(null);
   const dropdownRef = useRef(null);
+  const currencyDropdownRef = useRef(null);
   const searchInputRef = useRef(null);
   const megaMenuTimeout = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowProfileDropdown(false);
+      }
+      if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(event.target)) {
+        setShowCurrencyDropdown(false);
       }
     };
 
@@ -342,6 +349,64 @@ const Header = () => {
                   <FaSearch size={20} />
                 </button>
               )}
+
+              {/* Currency Dropdown - Mobile */}
+              <div className="relative" ref={currencyDropdownRef}>
+                <button
+                  onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                  className="p-2.5 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200"
+                  title="Change Currency"
+                >
+                  {(() => {
+                    const currencyInfo = getCurrencyInfo();
+                    const IconComponent = 
+                      currencyInfo.code === 'USD' || currencyInfo.code === 'CAD' || currencyInfo.code === 'AUD' || currencyInfo.code === 'SGD' || currencyInfo.code === 'HKD' || currencyInfo.code === 'AED' || currencyInfo.code === 'ZAR' ? FaDollarSign :
+                      currencyInfo.code === 'EUR' ? FaEuroSign :
+                      currencyInfo.code === 'GBP' ? FaPoundSign :
+                      FaRupeeSign;
+                    return <IconComponent size={18} />;
+                  })()}
+                </button>
+
+                {/* Currency Dropdown Menu - Mobile */}
+                {showCurrencyDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-96 overflow-y-auto">
+                    <div className="py-2">
+                      {Object.values(CURRENCIES).map((currency) => {
+                        const IconComponent = 
+                          currency.code === 'USD' || currency.code === 'CAD' || currency.code === 'AUD' || currency.code === 'SGD' || currency.code === 'HKD' || currency.code === 'AED' || currency.code === 'ZAR' ? FaDollarSign :
+                          currency.code === 'EUR' ? FaEuroSign :
+                          currency.code === 'GBP' ? FaPoundSign :
+                          FaRupeeSign;
+                        
+                        return (
+                          <button
+                            key={currency.code}
+                            onClick={() => {
+                              setSelectedCurrency(currency.code);
+                              setShowCurrencyDropdown(false);
+                            }}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gradient-to-r hover:from-emerald-50 hover:to-blue-50 transition-all duration-200 ${
+                              selectedCurrency === currency.code ? 'bg-emerald-50 border-l-4 border-emerald-500' : ''
+                            }`}
+                          >
+                            <IconComponent className={`w-4 h-4 ${selectedCurrency === currency.code ? 'text-emerald-600' : 'text-gray-600'}`} />
+                            <div className="flex-1">
+                              <p className={`text-sm font-medium ${selectedCurrency === currency.code ? 'text-emerald-600' : 'text-gray-700'}`}>
+                                {currency.name}
+                              </p>
+                              <p className="text-xs text-gray-500">{currency.code}</p>
+                            </div>
+                            {selectedCurrency === currency.code && (
+                              <FaCheck className="w-4 h-4 text-emerald-600" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Wishlist Icon - Only for buyers on mobile */}
               {isAuthenticated && (user?.role === "buyer" || !user?.role) && (
@@ -625,6 +690,66 @@ const Header = () => {
                 <FaSearch className="w-5 h-5" />
               </button>
             )}
+
+            {/* Currency Dropdown */}
+            <div className="relative" ref={currencyDropdownRef}>
+              <button
+                onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                className="flex items-center space-x-2 px-3 py-2.5 text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Change Currency"
+              >
+                {(() => {
+                  const currencyInfo = getCurrencyInfo();
+                  const IconComponent = 
+                    currencyInfo.code === 'USD' || currencyInfo.code === 'CAD' || currencyInfo.code === 'AUD' || currencyInfo.code === 'SGD' || currencyInfo.code === 'HKD' || currencyInfo.code === 'AED' || currencyInfo.code === 'ZAR' ? FaDollarSign :
+                    currencyInfo.code === 'EUR' ? FaEuroSign :
+                    currencyInfo.code === 'GBP' ? FaPoundSign :
+                    FaRupeeSign;
+                  return <IconComponent className="w-4 h-4" />;
+                })()}
+                <span className="text-sm font-semibold">{selectedCurrency}</span>
+                <FaChevronDown className={`w-3 h-3 transition-transform duration-200 ${showCurrencyDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Currency Dropdown Menu */}
+              {showCurrencyDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-96 overflow-y-auto">
+                  <div className="py-2">
+                    {Object.values(CURRENCIES).map((currency) => {
+                      const IconComponent = 
+                        currency.code === 'USD' || currency.code === 'CAD' || currency.code === 'AUD' || currency.code === 'SGD' || currency.code === 'HKD' || currency.code === 'AED' || currency.code === 'ZAR' ? FaDollarSign :
+                        currency.code === 'EUR' ? FaEuroSign :
+                        currency.code === 'GBP' ? FaPoundSign :
+                        FaRupeeSign;
+                      
+                      return (
+                        <button
+                          key={currency.code}
+                          onClick={() => {
+                            setSelectedCurrency(currency.code);
+                            setShowCurrencyDropdown(false);
+                          }}
+                          className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gradient-to-r hover:from-emerald-50 hover:to-blue-50 transition-all duration-200 ${
+                            selectedCurrency === currency.code ? 'bg-emerald-50 border-l-4 border-emerald-500' : ''
+                          }`}
+                        >
+                          <IconComponent className={`w-4 h-4 ${selectedCurrency === currency.code ? 'text-emerald-600' : 'text-gray-600'}`} />
+                          <div className="flex-1">
+                            <p className={`text-sm font-medium ${selectedCurrency === currency.code ? 'text-emerald-600' : 'text-gray-700'}`}>
+                              {currency.name}
+                            </p>
+                            <p className="text-xs text-gray-500">{currency.code}</p>
+                          </div>
+                          {selectedCurrency === currency.code && (
+                            <FaCheck className="w-4 h-4 text-emerald-600" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Wishlist Icon - Only for buyers */}
             {isAuthenticated && (user?.role === "buyer" || !user?.role) && (

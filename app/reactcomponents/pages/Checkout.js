@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { orderAPI } from '../services/api';
 import { FaCreditCard, FaTruck, FaCheck, FaLock } from 'react-icons/fa';
 import { useToast } from '../contexts/ToastContext';
@@ -13,6 +14,7 @@ const Checkout = () => {
     const navigate = useNavigate();
     const { cartItems, getCartSummary, clearCart } = useCart();
     const { isAuthenticated, user } = useAuth();
+    const { formatPrice, selectedCurrency, convertPrice, baseCurrency } = useCurrency();
     const { showError, showWarning } = useToast();
     const [loading, setLoading] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(false);
@@ -53,6 +55,12 @@ const Checkout = () => {
 
     const handleOnlinePayment = async (orderId, amount) => {
         try {
+            // Note: Payment gateways (Razorpay/Stripe) require payment in specific currencies
+            // Razorpay only supports INR, so we always use the base currency amount
+            // The 'amount' parameter here should already be in INR (base currency)
+            // as it comes from cartSummary.total which is stored in INR
+            const paymentAmount = amount; // This should already be in INR
+            
             // Load Razorpay script
             const script = document.createElement('script');
             script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -62,7 +70,7 @@ const Checkout = () => {
             script.onload = () => {
                 const options = {
                     key: process.env.REACT_APP_RAZORPAY_KEY || 'rzp_test_xxxxxxxxxx', // Replace with actual key
-                    amount: amount * 100, // Amount in paise
+                    amount: paymentAmount * 100, // Amount in paise (Razorpay only supports INR)
                     currency: 'INR',
                     name: 'Aurelane Gems',
                     description: `Order #${orderId}`,
@@ -400,11 +408,11 @@ const Checkout = () => {
                                             <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">{item.name}</h3>
                                             <p className="text-xs sm:text-sm text-gray-600">Qty: {item.quantity}</p>
                                             <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                                                ₹{((item.discount && item.discount > 0
+                                                {formatPrice(((item.discount && item.discount > 0
                                                     ? item.discountType === 'percentage'
                                                         ? item.price - (item.price * item.discount) / 100
                                                         : item.price - item.discount
-                                                    : item.price) * item.quantity).toLocaleString()}
+                                                    : item.price) * item.quantity))}
                                             </p>
                                         </div>
                                     </div>
@@ -415,24 +423,24 @@ const Checkout = () => {
                             <div className="space-y-3 mb-6">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Subtotal</span>
-                                    <span className="font-medium">₹{cartSummary.subtotal.toLocaleString()}</span>
+                                    <span className="font-medium">{formatPrice(cartSummary.subtotal)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Shipping</span>
                                     <span className="font-medium">
-                                        {cartSummary.shipping === 0 ? 'Free' : `₹${cartSummary.shipping.toLocaleString()}`}
+                                        {cartSummary.shipping === 0 ? 'Free' : formatPrice(cartSummary.shipping)}
                                     </span>
                                 </div>
                                 {cartSummary.discount > 0 && (
                                     <div className="flex justify-between text-emerald-600">
                                         <span>Discount</span>
-                                        <span className="font-medium">-₹{cartSummary.discount.toLocaleString()}</span>
+                                        <span className="font-medium">-{formatPrice(cartSummary.discount)}</span>
                                     </div>
                                 )}
                                 <div className="border-t pt-3">
                                     <div className="flex justify-between text-lg font-bold">
                                         <span>Total</span>
-                                        <span>₹{cartSummary.total.toLocaleString()}</span>
+                                        <span>{formatPrice(cartSummary.total)}</span>
                                     </div>
                                 </div>
                             </div>

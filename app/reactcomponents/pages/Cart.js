@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { otpAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
@@ -11,6 +12,7 @@ const Cart = () => {
     const navigate = useNavigate();
     const { cartItems, removeFromCart, updateQuantity, clearCart, getCartSummary } = useCart();
     const { isAuthenticated } = useAuth();
+    const { formatPrice } = useCurrency();
     const { showSuccess, showError, showWarning } = useToast();
 
     const [showOTPModal, setShowOTPModal] = useState(false);
@@ -176,18 +178,18 @@ const Cart = () => {
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-3 sm:mt-4 gap-3">
                                             <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap">
                                                 <span className="text-base sm:text-lg font-semibold text-gray-900">
-                                                    ₹{(() => {
+                                                    {(() => {
                                                         const price = item.discount && item.discount > 0
                                                             ? item.discountType === 'percentage'
                                                                 ? item.price - (item.price * item.discount) / 100
                                                                 : item.price - item.discount
                                                             : item.price;
-                                                        return price.toLocaleString();
+                                                        return formatPrice(price);
                                                     })()}
                                                 </span>
                                                 {item.discount > 0 && (
                                                     <span className="text-xs sm:text-sm text-gray-500 line-through">
-                                                        ₹{item.price.toLocaleString()}
+                                                        {formatPrice(item.price)}
                                                     </span>
                                                 )}
                                             </div>
@@ -217,13 +219,13 @@ const Cart = () => {
                                         {/* Item Total */}
                                         <div className="mt-2 text-right">
                                             <span className="text-base sm:text-lg font-semibold text-gray-900">
-                                                ₹{(() => {
+                                                {(() => {
                                                     const price = item.discount && item.discount > 0
                                                         ? item.discountType === 'percentage'
                                                             ? item.price - (item.price * item.discount) / 100
                                                             : item.price - item.discount
                                                         : item.price;
-                                                    return (price * item.quantity).toLocaleString();
+                                                    return formatPrice(price * item.quantity);
                                                 })()}
                                             </span>
                                         </div>
@@ -251,26 +253,26 @@ const Cart = () => {
                             <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
                                 <div className="flex justify-between text-sm sm:text-base">
                                     <span className="text-gray-600">Subtotal</span>
-                                    <span className="font-medium">₹{cartSummary.subtotal.toLocaleString()}</span>
+                                    <span className="font-medium">{formatPrice(cartSummary.subtotal)}</span>
                                 </div>
 
                                 <div className="flex justify-between text-sm sm:text-base">
                                     <span className="text-gray-600">Shipping</span>
                                     <span className="font-medium">
-                                        {cartSummary.shipping === 0 ? 'Free' : `₹${cartSummary.shipping}`}
+                                        {cartSummary.shipping === 0 ? 'Free' : formatPrice(cartSummary.shipping)}
                                     </span>
                                 </div>
 
                                 {!cartSummary.isEligibleForFreeShipping && (
                                     <div className="text-xs sm:text-sm text-emerald-600">
-                                        Add ₹{(cartSummary.freeShippingThreshold - cartSummary.subtotal).toLocaleString()} more for free shipping
+                                        Add {formatPrice(cartSummary.freeShippingThreshold - cartSummary.subtotal)} more for free shipping
                                     </div>
                                 )}
 
                                 <div className="border-t pt-2 sm:pt-3">
                                     <div className="flex justify-between text-base sm:text-lg font-semibold">
                                         <span>Total</span>
-                                        <span>₹{cartSummary.total.toLocaleString()}</span>
+                                        <span>{formatPrice(cartSummary.total)}</span>
                                     </div>
                                 </div>
                             </div>

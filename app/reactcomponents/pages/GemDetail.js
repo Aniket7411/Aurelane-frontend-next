@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gemAPI, wishlistAPI, reviewAPI } from '../services/api';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { FaHeart, FaShoppingCart, FaStar, FaArrowLeft, FaShare, FaCheck, FaTruck, FaCertificate, FaFacebook, FaTwitter, FaPinterest, FaLinkedin, FaUndo, FaCreditCard, FaPlay } from 'react-icons/fa';
 import GemCard from '../components/gems/GemCard';
 import axios from 'axios';
@@ -16,6 +17,7 @@ const GemDetail = () => {
     const navigate = useNavigate();
     const { addToCart, isInCart } = useCart();
     const { isAuthenticated, user } = useAuth();
+    const { formatPrice } = useCurrency();
     const { showSuccess, showError, showWarning } = useToast();
     const [gem, setGem] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -159,14 +161,6 @@ const GemDetail = () => {
             return gem.price - discountAmount;
         }
         return gem.price;
-    };
-
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0,
-        }).format(price);
     };
 
     const getGemEmoji = (category) => {
