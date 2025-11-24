@@ -35,27 +35,59 @@ let exchangeRatesCache = null;
 let exchangeRatesTimestamp = null;
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
-// Fetch exchange rates from a free API
+const FALLBACK_RATES = {
+    USD: 0.012,
+    EUR: 0.011,
+    GBP: 0.0095,
+    AED: 0.044,
+    CAD: 0.016,
+    AUD: 0.018,
+    SGD: 0.016,
+    HKD: 0.094,
+    ZAR: 0.22,
+    LKR: 4.0,
+    INR: 1
+};
+
+const fetchFromExchangeRateHost = async () => {
+    const symbols = Object.keys(CURRENCIES).join(',');
+    const response = await fetch(`https://api.exchangerate.host/latest?base=${BASE_CURRENCY}&symbols=${symbols}`);
+    if (!response.ok) {
+        throw new Error('exchangerate.host responded with an error');
+    }
+    const data = await response.json();
+    if (!data?.rates) {
+        throw new Error('exchangerate.host returned an invalid payload');
+    }
+    return data.rates;
+};
+
+const fetchFromOpenERAPI = async () => {
+    const response = await fetch(`https://open.er-api.com/v6/latest/${BASE_CURRENCY}`);
+    if (!response.ok) {
+        throw new Error('open.er-api responded with an error');
+    }
+    const data = await response.json();
+    if (data?.result !== 'success' || !data?.rates) {
+        throw new Error('open.er-api returned an invalid payload');
+    }
+    return data.rates;
+};
+
+// Fetch exchange rates from multiple free APIs with graceful fallback
 const fetchExchangeRates = async () => {
     try {
-        // Using exchangerate-api.com free tier (no API key required for basic usage)
-        // Alternative: You can use fixer.io, currencyapi.net, or any other service
-        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${BASE_CURRENCY}`);
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch exchange rates');
+        return await fetchFromExchangeRateHost();
+    } catch (firstError) {
+        console.error('Primary exchange rate provider failed:', firstError);
+        try {
+            return await fetchFromOpenERAPI();
+        } catch (secondError) {
+            console.error('Secondary exchange rate provider failed:', secondError);
+            // Fallback: Return approximate static rates so UI still changes
+            const fallbackRates = { ...FALLBACK_RATES };
+            return fallbackRates;
         }
-        
-        const data = await response.json();
-        return data.rates;
-    } catch (error) {
-        console.error('Error fetching exchange rates:', error);
-        // Fallback: Return default rates (1:1 for all currencies as fallback)
-        const fallbackRates = {};
-        Object.keys(CURRENCIES).forEach(code => {
-            fallbackRates[code] = 1;
-        });
-        return fallbackRates;
     }
 };
 

@@ -213,6 +213,7 @@ const GemDetail = () => {
                 discountType: gem.discountType,
                 image: gem.allImages?.[0] || gem.heroImage || gem.images?.[0] || null,
                 category: gem.category,
+                subcategory: gem.subcategory,
                 sizeWeight: gem.sizeWeight,
                 sizeUnit: gem.sizeUnit,
                 stock: gem.stock,
@@ -323,6 +324,10 @@ const GemDetail = () => {
         );
     }
 
+    const displayCategory = gem.category || 'N/A';
+    const displaySubcategory = gem.subcategory || 'N/A';
+    const visualLabel = gem.category || gem.subcategory || gem.name || 'Gem';
+
     const handleRelatedProductAddToCart = (relatedGem) => {
         addToCart({
             id: relatedGem._id || relatedGem.id,
@@ -332,6 +337,7 @@ const GemDetail = () => {
             discountType: relatedGem.discountType,
             image: relatedGem.allImages?.[0] || relatedGem.heroImage || relatedGem.images?.[0] || null,
             category: relatedGem.category,
+            subcategory: relatedGem.subcategory,
             sizeWeight: relatedGem.sizeWeight,
             sizeUnit: relatedGem.sizeUnit,
             stock: relatedGem.stock,
@@ -464,8 +470,8 @@ const GemDetail = () => {
                                     );
                                 } else {
                                     return (
-                                        <div className={`w-full h-full bg-gradient-to-br ${getGemGradient(gem.category || gem.name)} flex items-center justify-center`}>
-                                            <span className="text-6xl sm:text-8xl">{getGemEmoji(gem.category || gem.name)}</span>
+                                        <div className={`w-full h-full bg-gradient-to-br ${getGemGradient(visualLabel)} flex items-center justify-center`}>
+                                            <span className="text-6xl sm:text-8xl">{getGemEmoji(visualLabel)}</span>
                                         </div>
                                     );
                                 }
@@ -531,6 +537,14 @@ const GemDetail = () => {
                                     <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2 leading-tight">
                                         {gem.name}
                                     </h1>
+                                    <div className="flex flex-wrap gap-3 text-sm text-gray-600 mb-2">
+                                        <span>
+                                            <span className="font-semibold text-gray-800">Category:</span> {displayCategory}
+                                        </span>
+                                        <span>
+                                            <span className="font-semibold text-gray-800">Subcategory:</span> {displaySubcategory}
+                                        </span>
+                                    </div>
                                     {gem.sku && (
                                         <p className="text-sm text-gray-500 mb-3">SKU: {gem.sku}</p>
                                     )}
@@ -578,6 +592,16 @@ const GemDetail = () => {
                                         <p className="text-sm text-gray-600">Contact us for pricing details</p>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Category & Subcategory Details */}
+                            <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-base text-gray-700">
+                                <p>
+                                    <span className="font-semibold">Category:</span> {displayCategory}
+                                </p>
+                                <p>
+                                    <span className="font-semibold">Subcategory:</span> {displaySubcategory}
+                                </p>
                             </div>
 
                             {/* Origin */}

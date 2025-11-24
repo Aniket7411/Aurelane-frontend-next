@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { gemAPI } from '../services/api';
 import { gemstonesData } from '../data/gemstonesData';
+import { getCategoryOptions, getSubcategoryOptions } from '../data/gemCategoryHierarchy';
 import uploadFileToCloudinary from './uploadfunctionnew';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +12,8 @@ const AddGem = () => {
     const { showSuccess, showError } = useToast();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
+        category: '',
+        subcategory: '',
         name: '',
         hindiName: '',
         planet: '',
@@ -56,55 +59,6 @@ const AddGem = () => {
         { english: 'Ketu', hindi: 'केतु' }
     ];
 
-    // Common gem categories (expanded)
-    const gemCategories = [
-        // Navratna
-        'Blue Sapphire (Neelam)',
-        'Yellow Sapphire (Pukhraj)',
-        'Ruby (Manik)',
-        'Emerald (Panna)',
-        'Diamond (Heera)',
-        'Pearl (Moti)',
-        'Cat\'s Eye (Lehsunia)',
-        'Hessonite (Gomed)',
-        'Coral (Moonga)',
-        // Exclusive Gemstones
-        'Alexandrite',
-        'Basra Pearl',
-        'Burma Ruby',
-        'Colombian Emerald',
-        'Cornflower Blue Sapphire',
-        'Kashmir Blue Sapphire',
-        'No-Oil Emerald',
-        'Padparadscha Sapphire',
-        'Panjshir Emerald',
-        'Swat Emerald',
-        'Pigeon Blood Ruby',
-        'Royal Blue Sapphire',
-        // Sapphire
-        'Sapphire',
-        'Bi-Colour Sapphire (Pitambari)',
-        'Color Change Sapphire',
-        'Green Sapphire',
-        'Pink Sapphire',
-        'Padparadscha Sapphire',
-        'Peach Sapphire',
-        'Purple Sapphire (Khooni Neelam)',
-        'White Sapphire',
-        // The list repeats Yellow/Blue Sapphire in Navratna; keep unique options here
-        // More Vedic Ratna (Upratan)
-        'Amethyst',
-        'Aquamarine',
-        'Blue Topaz',
-        'Citrine Stone (Sunela)',
-        'Tourmaline',
-        'Opal',
-        'Tanzanite',
-        'Iolite (Neeli)',
-        'Jasper (Mahe Mariyam)',
-        'Lapis'
-    ];
-
     const birthMonths = [
         'January',
         'February',
@@ -119,6 +73,16 @@ const AddGem = () => {
         'November',
         'December'
     ];
+
+    const categoryOptions = useMemo(() => getCategoryOptions(), []);
+    const subcategoryOptions = useMemo(
+        () => getSubcategoryOptions(formData.category),
+        [formData.category]
+    );
+    const gemNameSuggestions = useMemo(
+        () => [...new Set(gemstonesData.map(g => g.name).filter(Boolean))],
+        []
+    );
 
     // Helpers to make auto-fill robust for variations like "Blue Sapphire (Neelam)"
     const normalizeString = (str) => (str || '').toString().trim().toLowerCase();
@@ -239,10 +203,18 @@ const AddGem = () => {
                 [name]: processedValue
             }));
         } else {
-            setFormData(prev => ({
-                ...prev,
-                [name]: value
-            }));
+            setFormData(prev => {
+                const updated = {
+                    ...prev,
+                    [name]: value
+                };
+
+                if (name === 'category') {
+                    updated.subcategory = '';
+                }
+
+                return updated;
+            });
 
             // Auto-populate data when name changes
             if (name === 'name') {
@@ -318,6 +290,8 @@ const AddGem = () => {
     const validateForm = () => {
         const newErrors = {};
 
+        if (!formData.category.trim()) newErrors.category = 'Category is required';
+        if (!formData.subcategory.trim()) newErrors.subcategory = 'Subcategory is required';
         if (!formData.name.trim()) newErrors.name = 'Name is required';
         if (!formData.hindiName.trim()) newErrors.hindiName = 'Hindi name is required';
         if (!formData.planet.trim()) newErrors.planet = 'Planet is required';
@@ -351,8 +325,9 @@ const AddGem = () => {
 
         try {
             const gemData = {
+                category: formData.category,
+                subcategory: formData.subcategory,
                 name: formData.name,
-                category: formData.name, // map selected gem to backend-required category
                 hindiName: formData.hindiName,
                 planet: formData.planet,
                 planetHindi: formData.planetHindi,
@@ -382,6 +357,8 @@ const AddGem = () => {
                 showSuccess('✨ Gem added successfully! Your gem is now live on the marketplace.');
                 // Reset form
                 setFormData({
+                    category: '',
+                    subcategory: '',
                     name: '',
                     hindiName: '',
                     planet: '',
@@ -415,7 +392,8 @@ const AddGem = () => {
                 if (response.errors) {
                     const fieldErrorMap = {
                         'name': 'name',
-                        'category': 'name',
+                        'category': 'category',
+                        'subcategory': 'subcategory',
                         'hindiName': 'hindiName',
                         'planet': 'planet',
                         'planetHindi': 'planetHindi',
@@ -477,7 +455,8 @@ const AddGem = () => {
                 // Map backend field errors to frontend field names
                 const fieldErrorMap = {
                     'name': 'name',
-                    'category': 'name', // category maps to name field
+                    'category': 'category',
+                    'subcategory': 'subcategory',
                     'hindiName': 'hindiName',
                     'planet': 'planet',
                     'planetHindi': 'planetHindi',
@@ -570,23 +549,75 @@ const AddGem = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
 
 
+                                {/* Category */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Category *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleInputChange}
+                                        list="add-gem-category-options"
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.category ? 'border-red-500' : 'border-gray-300'
+                                            }`}
+                                        placeholder="e.g., Ruby"
+                                    />
+                                    <datalist id="add-gem-category-options">
+                                        {categoryOptions.map(option => (
+                                            <option key={option} value={option} />
+                                        ))}
+                                    </datalist>
+                                    {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+                                </div>
+
+                                {/* Subcategory */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Subcategory *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="subcategory"
+                                        value={formData.subcategory}
+                                        onChange={handleInputChange}
+                                        list="add-gem-subcategory-options"
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.subcategory ? 'border-red-500' : 'border-gray-300'
+                                            }`}
+                                        placeholder={formData.category ? `e.g., Premium ${formData.category}` : 'e.g., Burma Ruby'}
+                                    />
+                                    <datalist id="add-gem-subcategory-options">
+                                        {subcategoryOptions.map(option => (
+                                            <option key={option} value={option} />
+                                        ))}
+                                    </datalist>
+                                    {errors.subcategory && <p className="text-red-500 text-sm mt-1">{errors.subcategory}</p>}
+                                </div>
+
                                 {/* Name */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Gem Name *
                                     </label>
-                                    <select
+                                    <input
+                                        type="text"
                                         name="name"
                                         value={formData.name}
                                         onChange={handleInputChange}
+                                        list="add-gem-name-suggestions"
                                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.name ? 'border-red-500' : 'border-gray-300'
                                             }`}
-                                    >
-                                        <option value="">Select Gem Name</option>
-                                        {gemCategories.map(gem => (
-                                            <option key={gem} value={gem}>{gem}</option>
+                                        placeholder="e.g., Burma Pigeon Blood Natural Ruby - 1.03 Carat"
+                                    />
+                                    <datalist id="add-gem-name-suggestions">
+                                        {gemNameSuggestions.map(option => (
+                                            <option key={option} value={option} />
                                         ))}
-                                    </select>
+                                    </datalist>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Use a descriptive name after selecting category & subcategory.
+                                    </p>
                                     {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                                 </div>
 

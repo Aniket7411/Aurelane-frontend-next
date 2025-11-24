@@ -8,6 +8,7 @@ import { useCurrency } from '../../contexts/CurrencyContext';
 
 const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hideActions = false }) => {
     const { formatPrice } = useCurrency();
+    const visualLabel = gem.category || gem.subcategory || gem.name;
 
     const calculatePrice = () => {
         if (gem.discount && gem.discount > 0) {
@@ -72,8 +73,8 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 cursor-pointer"
                         />
                     ) : (
-                        <div className={`w-full h-full bg-gradient-to-br ${getGemGradient(gem.category)} flex items-center justify-center cursor-pointer`}>
-                            <span className="text-4xl sm:text-5xl md:text-6xl">{getGemEmoji(gem.category)}</span>
+                        <div className={`w-full h-full bg-gradient-to-br ${getGemGradient(visualLabel)} flex items-center justify-center cursor-pointer`}>
+                            <span className="text-4xl sm:text-5xl md:text-6xl">{getGemEmoji(visualLabel)}</span>
                         </div>
                     )}
                 </Link>
@@ -126,11 +127,18 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
 
             {/* Content Section */}
             <div className="p-3 sm:p-4 md:p-6 flex-1 flex flex-col">
-                {/* Category & Rating */}
-                <div className="flex items-center justify-between mb-1.5 sm:mb-2 gap-2">
-                    <span className="text-[10px] sm:text-xs md:text-sm font-medium text-emerald-600 bg-emerald-50 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full truncate flex-shrink">
-                        {gem.category}
-                    </span>
+                {/* Category / Subcategory & Rating */}
+                <div className="flex items-start justify-between mb-1.5 sm:mb-2 gap-2">
+                    <div className="text-[10px] sm:text-xs text-gray-600 space-y-0.5">
+                        <div>
+                            <span className="font-semibold text-gray-700">Category:</span>{' '}
+                            {gem.category || 'N/A'}
+                        </div>
+                        <div>
+                            <span className="font-semibold text-gray-700">Subcategory:</span>{' '}
+                            {gem.subcategory || 'N/A'}
+                        </div>
+                    </div>
                     <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
                         <FaStar className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-yellow-400" />
                         <span className="text-xs sm:text-sm text-gray-600">{gem.averageRating || gem.rating || 0}</span>

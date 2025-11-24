@@ -69,11 +69,13 @@ const Shop = () => {
     const [categories, setCategories] = useState([]);
     const [wishlist, setWishlist] = useState(new Set());
     const [loadingWishlist, setLoadingWishlist] = useState(false);
+    const [showMobileFilters, setShowMobileFilters] = useState(false);
 
     // Filter states
     const initialSearch = searchParams.get('query') || '';
     const initialCategories = parseCategoryParam(searchParams.get('category'));
     const initialBirthMonth = searchParams.get('birthMonth') || '';
+    const initialSubcategory = searchParams.get('subcategory') || '';
 
     const [filters, setFilters] = useState({
         page: 1,
@@ -83,7 +85,8 @@ const Shop = () => {
         minPrice: '',
         maxPrice: '',
         sort: 'newest',
-        birthMonth: initialBirthMonth
+        birthMonth: initialBirthMonth,
+        subcategory: initialSubcategory
     });
 
     // Temporary filter inputs (before apply)
@@ -93,7 +96,8 @@ const Shop = () => {
         minPrice: '',
         maxPrice: '',
         sort: 'newest',
-        birthMonth: initialBirthMonth
+        birthMonth: initialBirthMonth,
+        subcategory: initialSubcategory
     });
 
     const {
@@ -104,10 +108,36 @@ const Shop = () => {
         minPrice,
         maxPrice,
         sort,
-        birthMonth
+        birthMonth,
+        subcategory
     } = filters;
 
     const categoryKey = categoryFilter.join('|');
+    const availableSubcategories = useMemo(() => {
+        const subcategorySet = new Set();
+        gems.forEach(gem => {
+            if (gem?.subcategory) {
+                subcategorySet.add(gem.subcategory);
+            }
+        });
+        return Array.from(subcategorySet).sort((a, b) => a.localeCompare(b));
+    }, [gems]);
+
+    const displayedGems = useMemo(() => {
+        if (!Array.isArray(gems)) {
+            return [];
+        }
+
+        if (sort && sort !== 'newest') {
+            return gems;
+        }
+
+        return [...gems].sort((a, b) => {
+            const nameA = (a?.name || '').toLowerCase();
+            const nameB = (b?.name || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+    }, [gems, sort]);
 
     // Fetch gems
     const fetchGems = useCallback(async () => {
@@ -123,6 +153,7 @@ const Shop = () => {
             if (minPrice) params.minPrice = minPrice;
             if (maxPrice) params.maxPrice = maxPrice;
             if (sort) params.sort = sort;
+            if (subcategory) params.subcategory = subcategory;
             if (birthMonth) params.birthMonth = birthMonth;
 
             const response = await gemAPI.getGems(params);
@@ -141,7 +172,7 @@ const Shop = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey]);
+    }, [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey, subcategory]);
 
     // Fetch categories
     const fetchCategories = useCallback(async () => {
@@ -185,8 +216,9 @@ const Shop = () => {
         maxPrice,
         sort,
         birthMonth,
-        categoryKey
-    }), [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey]);
+        categoryKey,
+        subcategory
+    }), [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey, subcategory]);
 
     const lastFetchKeyRef = useRef('');
 
@@ -212,13 +244,15 @@ const Shop = () => {
         const updatedSearch = params.get('query') || '';
         const updatedCategories = parseCategoryParam(params.get('category'));
         const updatedBirthMonth = params.get('birthMonth') || '';
+        const updatedSubcategory = params.get('subcategory') || '';
 
         setFilters(prev => {
             const isSameSearch = prev.search === updatedSearch;
             const isSameCategories = arraysAreEqual(prev.category, updatedCategories);
             const isSameBirthMonth = prev.birthMonth === updatedBirthMonth;
+            const isSameSubcategory = prev.subcategory === updatedSubcategory;
 
-            if (isSameSearch && isSameCategories && isSameBirthMonth) {
+            if (isSameSearch && isSameCategories && isSameBirthMonth && isSameSubcategory) {
                 return prev;
             }
 
@@ -227,6 +261,7 @@ const Shop = () => {
                 search: updatedSearch,
                 category: updatedCategories,
                 birthMonth: updatedBirthMonth,
+                subcategory: updatedSubcategory,
                 page: 1
             };
         });
@@ -235,8 +270,9 @@ const Shop = () => {
             const isSameSearch = prev.search === updatedSearch;
             const isSameCategories = arraysAreEqual(prev.category, updatedCategories);
             const isSameBirthMonth = prev.birthMonth === updatedBirthMonth;
+            const isSameSubcategory = prev.subcategory === updatedSubcategory;
 
-            if (isSameSearch && isSameCategories && isSameBirthMonth) {
+            if (isSameSearch && isSameCategories && isSameBirthMonth && isSameSubcategory) {
                 return prev;
             }
 
@@ -244,7 +280,8 @@ const Shop = () => {
                 ...prev,
                 search: updatedSearch,
                 category: updatedCategories,
-                birthMonth: updatedBirthMonth
+                birthMonth: updatedBirthMonth,
+                subcategory: updatedSubcategory
             };
         });
 
@@ -256,6 +293,7 @@ const Shop = () => {
         if (filters.search) params.set('query', filters.search);
         if (filters.category && filters.category.length > 0) params.set('category', filters.category.join(','));
         if (filters.birthMonth) params.set('birthMonth', filters.birthMonth);
+        if (filters.subcategory) params.set('subcategory', filters.subcategory);
 
         const nextQuery = params.toString();
         if (lastSyncedQueryRef.current === nextQuery) {
@@ -263,7 +301,7 @@ const Shop = () => {
         }
         lastSyncedQueryRef.current = nextQuery;
         navigate(nextQuery ? `/shop?${nextQuery}` : '/shop', { replace: true });
-    }, [filters.search, filters.category, filters.birthMonth, navigate]);
+    }, [filters.search, filters.category, filters.birthMonth, filters.subcategory, navigate]);
 
     // Handle apply filters
     const handleApplyFilters = () => {
@@ -275,6 +313,7 @@ const Shop = () => {
             maxPrice: tempFilters.maxPrice,
             sort: tempFilters.sort,
             birthMonth: tempFilters.birthMonth,
+            subcategory: tempFilters.subcategory,
             page: 1 // Reset to first page when filters change
         }));
     };
@@ -351,7 +390,8 @@ const Shop = () => {
             minPrice: '',
             maxPrice: '',
             sort: 'newest',
-            birthMonth: ''
+            birthMonth: '',
+            subcategory: ''
         };
         setFilters(resetFilters);
         setTempFilters({
@@ -360,7 +400,8 @@ const Shop = () => {
             minPrice: '',
             maxPrice: '',
             sort: 'newest',
-            birthMonth: ''
+            birthMonth: '',
+            subcategory: ''
         });
     };
 
@@ -374,6 +415,7 @@ const Shop = () => {
             discountType: gem.discountType,
             image: gem.allImages?.[0] || gem.heroImage || gem.images?.[0] || null,
             category: gem.category,
+            subcategory: gem.subcategory,
             sizeWeight: gem.sizeWeight,
             sizeUnit: gem.sizeUnit,
             stock: gem.stock
@@ -449,196 +491,251 @@ const Shop = () => {
         );
     }
 
+    // Render filter content (shared between desktop and mobile)
+    const renderFilterContent = () => (
+        <>
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-200">
+                <div className="p-2 sm:p-2.5 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 rounded-lg sm:rounded-xl shadow-lg">
+                    <FaFilter className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Filters</h2>
+            </div>
+
+            {/* Search */}
+            <form onSubmit={handleSearchSubmit} className="mb-4 sm:mb-6">
+                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+                    <FaSearch className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <span>Search Gems</span>
+                </label>
+                <div className="relative">
+                    <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <FaSearch className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                    <input
+                        type="text"
+                        value={tempFilters.search}
+                        onChange={handleSearchChange}
+                        placeholder="Search by name, category..."
+                        className="w-full pl-9 sm:pl-10 pr-16 sm:pr-20 py-2 sm:py-2.5 md:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm hover:shadow-md bg-white"
+                    />
+                    <button
+                        type="submit"
+                        className="absolute right-1.5 sm:right-2 top-1/2 transform -translate-y-1/2 px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-xs sm:text-sm font-medium rounded-md sm:rounded-lg hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-1"
+                    >
+                        <span>Find</span>
+                    </button>
+                </div>
+            </form>
+
+            {/* Category Filter */}
+            <div className="mb-4 sm:mb-6">
+                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                    <MdCategory className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <span>Categories</span>
+                </label>
+                <div className="space-y-1.5 sm:space-y-2 max-h-48 sm:max-h-56 overflow-y-auto custom-scrollbar pr-2">
+                    {categories.map((category) => (
+                        <label
+                            key={category}
+                            className={`flex items-center space-x-2 sm:space-x-3 cursor-pointer p-1.5 sm:p-2 rounded-md sm:rounded-lg transition-all ${tempFilters.category.includes(category)
+                                ? 'bg-emerald-50 border border-emerald-200'
+                                : 'hover:bg-gray-50'
+                                }`}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={tempFilters.category.includes(category)}
+                                onChange={() => handleCategoryToggle(category)}
+                                className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 sm:w-4 sm:h-4 cursor-pointer"
+                            />
+                            <span className={`text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 ${tempFilters.category.includes(category)
+                                ? 'text-emerald-700 font-semibold'
+                                : 'text-gray-700'
+                                }`}>
+                                {tempFilters.category.includes(category) && (
+                                    <FaCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600" />
+                                )}
+                                {category}
+                            </span>
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+            {/* Subcategory Filter */}
+            <div className="mb-4 sm:mb-6">
+                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                    <MdCategory className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <span>Subcategory</span>
+                </label>
+                <input
+                    type="text"
+                    value={tempFilters.subcategory}
+                    onChange={(e) => setTempFilters(prev => ({ ...prev, subcategory: e.target.value }))}
+                    placeholder="e.g., Burma Ruby"
+                    list="shop-subcategory-options"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
+                />
+            </div>
+
+            {/* Price Range */}
+            <div className="mb-4 sm:mb-6">
+                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                    <MdPriceCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <span>Price Range</span>
+                </label>
+                <div className="space-y-2 sm:space-y-3">
+                    <div className="relative">
+                        <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <FaRupeeSign className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        </div>
+                        <input
+                            type="number"
+                            value={tempFilters.minPrice}
+                            onChange={(e) => handlePriceChange('minPrice', e.target.value)}
+                            placeholder="Min Price"
+                            min="0"
+                            className="w-full pl-8 sm:pl-9 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
+                        />
+                    </div>
+                    <div className="relative">
+                        <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <FaRupeeSign className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        </div>
+                        <input
+                            type="number"
+                            value={tempFilters.maxPrice}
+                            onChange={(e) => handlePriceChange('maxPrice', e.target.value)}
+                            placeholder="Max Price"
+                            min="0"
+                            className="w-full pl-8 sm:pl-9 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Birth Month */}
+            <div className="mb-4 sm:mb-6">
+                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                    <MdEventAvailable className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <span>Birth Month</span>
+                </label>
+                <select
+                    value={tempFilters.birthMonth}
+                    onChange={(e) => setTempFilters(prev => ({ ...prev, birthMonth: e.target.value }))}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
+                >
+                    <option value="">Any Birth Month</option>
+                    {birthMonths.map(month => (
+                        <option key={month} value={month}>{month}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Sort */}
+            <div className="mb-4 sm:mb-6">
+                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+                    <FaSort className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <span>Sort By</span>
+                </label>
+                <div className="relative">
+                    <FaSortAmountDown className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 sm:w-4 sm:h-4 pointer-events-none" />
+                    <select
+                        value={tempFilters.sort}
+                        onChange={(e) => handleSortChange(e.target.value)}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-9 sm:pr-10 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white cursor-pointer appearance-none"
+                    >
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="price-low">Price: Low to High</option>
+                        <option value="price-high">Price: High to Low</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* Apply Filters Button */}
+            <div className="space-y-2 sm:space-y-3">
+                <button
+                    onClick={() => {
+                        handleApplyFilters();
+                        setShowMobileFilters(false);
+                    }}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-white text-sm sm:text-base font-semibold rounded-lg sm:rounded-xl hover:from-emerald-700 hover:via-emerald-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center gap-1.5 sm:gap-2"
+                >
+                    <FaCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span>Apply Filters</span>
+                </button>
+                <button
+                    onClick={() => {
+                        clearFilters();
+                        setShowMobileFilters(false);
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 text-gray-700 text-sm sm:text-base font-medium rounded-lg sm:rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all flex items-center justify-center gap-1.5 sm:gap-2"
+                >
+                    <MdClear className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span>Clear All</span>
+                </button>
+            </div>
+
+            {/* Active Filters Count */}
+            <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+                <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1">
+                        <FaGem className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                        <div className="text-xl sm:text-2xl font-bold text-emerald-600">
+                            {pagination.totalItems || 0}
+                        </div>
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-600 font-medium">
+                        {pagination.totalItems === 1 ? 'gem found' : 'gems found'}
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-blue-50/30">
-
-
+            <datalist id="shop-subcategory-options">
+                {availableSubcategories.map(option => (
+                    <option key={option} value={option} />
+                ))}
+            </datalist>
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12 -mt-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-                    {/* Filters Sidebar */}
-                    <div className="lg:col-span-1">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-4 sm:pb-6 md:pb-8 lg:pb-12">
+                {/* Mobile Filter Button - Only visible on small/medium screens */}
+                <div className="md:hidden mb-4 mt-2">
+                    <button
+                        onClick={() => setShowMobileFilters(true)}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-white text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                    >
+                        <FaFilter className="w-5 h-5" />
+                        <span>Filters</span>
+                        {(filters.search || filters.category.length > 0 || filters.minPrice || filters.maxPrice || filters.subcategory || filters.birthMonth || filters.sort !== 'newest') && (
+                            <span className="bg-white text-emerald-600 rounded-full px-2 py-0.5 text-xs font-bold">
+                                {[
+                                    filters.search ? 1 : 0,
+                                    filters.category.length,
+                                    (filters.minPrice || filters.maxPrice) ? 1 : 0,
+                                    filters.subcategory ? 1 : 0,
+                                    filters.birthMonth ? 1 : 0,
+                                    filters.sort !== 'newest' ? 1 : 0
+                                ].reduce((a, b) => a + b, 0)}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+                    {/* Filters Sidebar - Hidden on mobile, visible on tablet/desktop */}
+                    <div className="hidden md:block md:col-span-1">
                         <motion.div
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.5 }}
-                            className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-5 md:p-6 sticky top-6"
+                            className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-5 md:p-6 sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto"
                         >
-                            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-200">
-                                <div className="p-2 sm:p-2.5 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 rounded-lg sm:rounded-xl shadow-lg">
-                                    <FaFilter className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                                </div>
-                                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Filters</h2>
-                            </div>
-
-                            {/* Search */}
-                            <form onSubmit={handleSearchSubmit} className="mb-4 sm:mb-6">
-                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2">
-                                    <FaSearch className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
-                                    <span>Search Gems</span>
-                                </label>
-                                <div className="relative">
-                                    <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                        <FaSearch className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={tempFilters.search}
-                                        onChange={handleSearchChange}
-                                        placeholder="Search by name, category..."
-                                        className="w-full pl-9 sm:pl-10 pr-16 sm:pr-20 py-2 sm:py-2.5 md:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm hover:shadow-md bg-white"
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="absolute right-1.5 sm:right-2 top-1/2 transform -translate-y-1/2 px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-xs sm:text-sm font-medium rounded-md sm:rounded-lg hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-1"
-                                    >
-                                        <span>Find</span>
-                                    </button>
-                                </div>
-                            </form>
-
-                            {/* Category Filter */}
-                            <div className="mb-4 sm:mb-6">
-                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
-                                    <MdCategory className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
-                                    <span>Categories</span>
-                                </label>
-                                <div className="space-y-1.5 sm:space-y-2 max-h-48 sm:max-h-56 overflow-y-auto custom-scrollbar pr-2">
-                                    {categories.map((category) => (
-                                        <label
-                                            key={category}
-                                            className={`flex items-center space-x-2 sm:space-x-3 cursor-pointer p-1.5 sm:p-2 rounded-md sm:rounded-lg transition-all ${tempFilters.category.includes(category)
-                                                ? 'bg-emerald-50 border border-emerald-200'
-                                                : 'hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={tempFilters.category.includes(category)}
-                                                onChange={() => handleCategoryToggle(category)}
-                                                className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 sm:w-4 sm:h-4 cursor-pointer"
-                                            />
-                                            <span className={`text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 ${tempFilters.category.includes(category)
-                                                ? 'text-emerald-700 font-semibold'
-                                                : 'text-gray-700'
-                                                }`}>
-                                                {tempFilters.category.includes(category) && (
-                                                    <FaCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600" />
-                                                )}
-                                                {category}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Price Range */}
-                            <div className="mb-4 sm:mb-6">
-                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
-                                    <MdPriceCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
-                                    <span>Price Range</span>
-                                </label>
-                                <div className="space-y-2 sm:space-y-3">
-                                    <div className="relative">
-                                        <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                            <FaRupeeSign className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                        </div>
-                                        <input
-                                            type="number"
-                                            value={tempFilters.minPrice}
-                                            onChange={(e) => handlePriceChange('minPrice', e.target.value)}
-                                            placeholder="Min Price"
-                                            min="0"
-                                            className="w-full pl-8 sm:pl-9 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                            <FaRupeeSign className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                        </div>
-                                        <input
-                                            type="number"
-                                            value={tempFilters.maxPrice}
-                                            onChange={(e) => handlePriceChange('maxPrice', e.target.value)}
-                                            placeholder="Max Price"
-                                            min="0"
-                                            className="w-full pl-8 sm:pl-9 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Birth Month */}
-                            <div className="mb-4 sm:mb-6">
-                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
-                                    <MdEventAvailable className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
-                                    <span>Birth Month</span>
-                                </label>
-                                <select
-                                    value={tempFilters.birthMonth}
-                                    onChange={(e) => setTempFilters(prev => ({ ...prev, birthMonth: e.target.value }))}
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                                >
-                                    <option value="">Any Birth Month</option>
-                                    {birthMonths.map(month => (
-                                        <option key={month} value={month}>{month}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Sort */}
-                            <div className="mb-4 sm:mb-6">
-                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2">
-                                    <FaSort className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
-                                    <span>Sort By</span>
-                                </label>
-                                <div className="relative">
-                                    <FaSortAmountDown className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 sm:w-4 sm:h-4 pointer-events-none" />
-                                    <select
-                                        value={tempFilters.sort}
-                                        onChange={(e) => handleSortChange(e.target.value)}
-                                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-9 sm:pr-10 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white cursor-pointer appearance-none"
-                                    >
-                                        <option value="newest">Newest First</option>
-                                        <option value="oldest">Oldest First</option>
-                                        <option value="price-low">Price: Low to High</option>
-                                        <option value="price-high">Price: High to Low</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Apply Filters Button */}
-                            <div className="space-y-2 sm:space-y-3">
-                                <button
-                                    onClick={handleApplyFilters}
-                                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-white text-sm sm:text-base font-semibold rounded-lg sm:rounded-xl hover:from-emerald-700 hover:via-emerald-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center gap-1.5 sm:gap-2"
-                                >
-                                    <FaCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    <span>Apply Filters</span>
-                                </button>
-                                <button
-                                    onClick={clearFilters}
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 text-gray-700 text-sm sm:text-base font-medium rounded-lg sm:rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all flex items-center justify-center gap-1.5 sm:gap-2"
-                                >
-                                    <MdClear className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    <span>Clear All</span>
-                                </button>
-                            </div>
-
-                            {/* Active Filters Count */}
-                            <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
-                                <div className="text-center">
-                                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1">
-                                        <FaGem className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-                                        <div className="text-xl sm:text-2xl font-bold text-emerald-600">
-                                            {pagination.totalItems || 0}
-                                        </div>
-                                    </div>
-                                    <div className="text-xs sm:text-sm text-gray-600 font-medium">
-                                        {pagination.totalItems === 1 ? 'gem found' : 'gems found'}
-                                    </div>
-                                </div>
-                            </div>
+                            {renderFilterContent()}
                         </motion.div>
                     </div>
 
@@ -652,7 +749,7 @@ const Shop = () => {
                         >
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <div>
-                                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                                    <div className="flex items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1">
                                         <HiSparkles className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
                                         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                                             Discover Our Collection
@@ -660,7 +757,7 @@ const Shop = () => {
                                     </div>
                                     <p className="text-sm sm:text-base text-gray-600 flex items-center gap-1 flex-wrap">
                                         <span>Showing</span>
-                                        <span className="font-semibold text-emerald-600">{gems.length}</span>
+                                        <span className="font-semibold text-emerald-600">{displayedGems.length}</span>
                                         <span>of</span>
                                         <span className="font-semibold">{pagination.totalItems || 0}</span>
                                         <span>gems</span>
@@ -703,6 +800,22 @@ const Shop = () => {
                                         </button>
                                     </span>
                                 ))}
+                                {filters.subcategory && (
+                                    <span className="bg-indigo-100 text-indigo-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 font-medium">
+                                        <MdCategory className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                        <span className="truncate max-w-[120px] sm:max-w-none">{filters.subcategory}</span>
+                                        <button
+                                            onClick={() => {
+                                                setFilters(prev => ({ ...prev, subcategory: '' }));
+                                                setTempFilters(prev => ({ ...prev, subcategory: '' }));
+                                            }}
+                                            className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors flex-shrink-0"
+                                            aria-label="Remove subcategory filter"
+                                        >
+                                            <FaTimes className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                        </button>
+                                    </span>
+                                )}
                                 {(filters.minPrice || filters.maxPrice) && (
                                     <span className="bg-purple-100 text-purple-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 font-medium">
                                         <FaRupeeSign className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
@@ -778,7 +891,7 @@ const Shop = () => {
                         {/* Gems Grid */}
                         {!error && (
                             <>
-                                {gems.length === 0 ? (
+                                {displayedGems.length === 0 ? (
                                     <motion.div
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -805,7 +918,7 @@ const Shop = () => {
                                         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mb-6 sm:mb-8"
                                     >
                                         <AnimatePresence>
-                                            {gems.map((gem) => (
+                                            {displayedGems.map((gem) => (
                                                 <motion.div
                                                     key={gem._id || gem.id}
                                                     layout
@@ -843,6 +956,47 @@ const Shop = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Filter Modal/Drawer */}
+            <AnimatePresence>
+                {showMobileFilters && (
+                    <>
+                        {/* Overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowMobileFilters(false)}
+                            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                        />
+                        {/* Drawer */}
+                        <motion.div
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'tween', duration: 0.3 }}
+                            className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 overflow-y-auto lg:hidden"
+                        >
+                            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between z-10">
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <FaFilter className="w-5 h-5 text-emerald-600" />
+                                    Filters
+                                </h2>
+                                <button
+                                    onClick={() => setShowMobileFilters(false)}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+                                    aria-label="Close filters"
+                                >
+                                    <FaTimes className="w-6 h-6" />
+                                </button>
+                            </div>
+                            <div className="p-4">
+                                {renderFilterContent()}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

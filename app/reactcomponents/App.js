@@ -4,6 +4,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { authAPI } from './services/api';
 import { CartProvider } from './contexts/CartContext';
+import { CurrencyProvider } from './contexts/CurrencyContext';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Pages
@@ -71,6 +72,7 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
+      <CurrencyProvider>
       <CartProvider>
         <Router>
           <div className="App">
@@ -396,6 +398,7 @@ function App() {
           </div>
         </Router>
       </CartProvider>
+      </CurrencyProvider>
     </AuthProvider>
   );
 }
