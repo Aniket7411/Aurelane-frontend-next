@@ -30,6 +30,9 @@ export const CURRENCIES = {
 // Base currency (INR) - all prices in backend are stored in INR
 const BASE_CURRENCY = 'INR';
 
+// Global markup applied on non-INR currency conversions
+const CONVERSION_MARKUP = 0.15; // 15%
+
 // Exchange rates cache (in-memory)
 let exchangeRatesCache = null;
 let exchangeRatesTimestamp = null;
@@ -202,8 +205,10 @@ export const CurrencyProvider = ({ children }) => {
         if (!priceInINR || priceInINR === 0) return 0;
         if (selectedCurrency === BASE_CURRENCY) return priceInINR;
         if (!exchangeRates || !exchangeRates[selectedCurrency]) return priceInINR;
-        
-        return priceInINR * exchangeRates[selectedCurrency];
+
+        const convertedPrice = priceInINR * exchangeRates[selectedCurrency];
+        // Apply markup only for non-INR conversions so international prices include premium
+        return convertedPrice * (1 + CONVERSION_MARKUP);
     }, [selectedCurrency, exchangeRates]);
 
     // Format price with currency symbol

@@ -16,6 +16,86 @@ const apiClient = axios.create({
     },
 });
 
+// Simple in-memory cache to avoid repeated GET calls for the same filters
+const DEFAULT_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const requestCache = new Map();
+const inFlightRequests = new Map();
+
+const buildCacheKey = (method, url, params = {}) => {
+    const serializedParams = params && Object.keys(params).length > 0 ? JSON.stringify(params) : '';
+    return `${method}:${url}?${serializedParams}`;
+};
+
+const getCachedEntry = (cacheKey) => {
+    const entry = requestCache.get(cacheKey);
+    if (!entry) {
+        return null;
+    }
+    if (Date.now() - entry.timestamp > entry.ttl) {
+        requestCache.delete(cacheKey);
+        return null;
+    }
+    return entry.data;
+};
+
+const cachedGet = async (url, config = {}, options = {}) => {
+    const {
+        forceRefresh = false,
+        ttl = DEFAULT_CACHE_TTL,
+        cacheKey: customCacheKey,
+        enableCache = true
+    } = options;
+
+    if (!enableCache) {
+        return apiClient.get(url, config);
+    }
+
+    const params = config?.params || {};
+    const key = customCacheKey || buildCacheKey('GET', url, params);
+
+    if (!forceRefresh) {
+        const cachedResponse = getCachedEntry(key);
+        if (cachedResponse) {
+            return cachedResponse;
+        }
+
+        if (inFlightRequests.has(key)) {
+            return inFlightRequests.get(key);
+        }
+    }
+
+    const requestPromise = apiClient.get(url, config);
+    inFlightRequests.set(key, requestPromise);
+
+    try {
+        const response = await requestPromise;
+        requestCache.set(key, {
+            timestamp: Date.now(),
+            ttl,
+            data: response
+        });
+        return response;
+    } finally {
+        inFlightRequests.delete(key);
+    }
+};
+
+const invalidateCache = (prefixes = []) => {
+    const list = Array.isArray(prefixes) ? prefixes : [prefixes];
+    list.forEach(prefix => {
+        requestCache.forEach((_value, key) => {
+            if (key.startsWith(prefix)) {
+                requestCache.delete(key);
+            }
+        });
+    });
+};
+
+const GEM_CACHE_PREFIX = 'GET:/gems';
+const GEM_LIST_CACHE_TTL = 2 * 60 * 1000;
+const GEM_DETAIL_CACHE_TTL = 5 * 60 * 1000;
+const GEM_CATEGORY_CACHE_TTL = 10 * 60 * 1000;
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
     (config) => {
@@ -276,11 +356,19 @@ export const authAPI = {
 export const gemAPI = {
     // Add a new gem
     addGem: async (gemData) => {
-        return apiClient.post('/gems', gemData);
+        const response = await apiClient.post('/gems', gemData);
+        invalidateCache([
+            GEM_CACHE_PREFIX,
+            'GET:/gems/categories',
+            'GET:/gems/category',
+            'GET:/gems/zodiac'
+        ]);
+        return response;
     },
 
     // Get all gems
-    getGems: async (params = {}) => {
+    getGems: async (params = {}, options = {}) => {
+        const { forceRefresh = false, cacheTtl = GEM_LIST_CACHE_TTL } = options;
         // Filter out empty values
         const filteredParams = Object.keys(params).reduce((acc, key) => {
             if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
@@ -289,22 +377,45 @@ export const gemAPI = {
             return acc;
         }, {});
 
-        return apiClient.get('/gems', { params: filteredParams });
+        return cachedGet('/gems', { params: filteredParams }, {
+            ttl: cacheTtl,
+            forceRefresh
+        });
     },
 
     // Get gem by ID
-    getGemById: async (id) => {
-        return apiClient.get(`/gems/${id}`);
+    getGemById: async (id, options = {}) => {
+        const { forceRefresh = false, cacheTtl = GEM_DETAIL_CACHE_TTL } = options;
+        return cachedGet(`/gems/${id}`, {}, {
+            ttl: cacheTtl,
+            forceRefresh
+        });
     },
 
     // Update gem
     updateGem: async (id, gemData) => {
-        return apiClient.put(`/gems/${id}`, gemData);
+        const response = await apiClient.put(`/gems/${id}`, gemData);
+        invalidateCache([
+            `${GEM_CACHE_PREFIX}`,
+            `GET:/gems/${id}`,
+            'GET:/gems/categories',
+            'GET:/gems/category',
+            'GET:/gems/zodiac'
+        ]);
+        return response;
     },
 
     // Delete gem
     deleteGem: async (id) => {
-        return apiClient.delete(`/gems/${id}`);
+        const response = await apiClient.delete(`/gems/${id}`);
+        invalidateCache([
+            `${GEM_CACHE_PREFIX}`,
+            `GET:/gems/${id}`,
+            'GET:/gems/categories',
+            'GET:/gems/category',
+            'GET:/gems/zodiac'
+        ]);
+        return response;
     },
 
     // Search gems
@@ -314,17 +425,23 @@ export const gemAPI = {
 
     // Get gem categories
     getGemCategories: async () => {
-        return apiClient.get('/gems/categories');
+        return cachedGet('/gems/categories', {}, {
+            ttl: GEM_CATEGORY_CACHE_TTL
+        });
     },
 
     // Get gems by category
     getGemsByCategory: async (category) => {
-        return apiClient.get(`/gems/category/${category}`);
+        return cachedGet(`/gems/category/${category}`, {}, {
+            ttl: GEM_CATEGORY_CACHE_TTL
+        });
     },
 
     // Get gems by zodiac sign
     getGemsByZodiac: async (zodiacSign) => {
-        return apiClient.get(`/gems/zodiac/${zodiacSign}`);
+        return cachedGet(`/gems/zodiac/${zodiacSign}`, {}, {
+            ttl: GEM_CATEGORY_CACHE_TTL
+        });
     }
 };
 

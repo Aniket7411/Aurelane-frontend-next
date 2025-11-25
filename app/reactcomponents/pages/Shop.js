@@ -75,7 +75,6 @@ const Shop = () => {
     const initialSearch = searchParams.get('query') || '';
     const initialCategories = parseCategoryParam(searchParams.get('category'));
     const initialBirthMonth = searchParams.get('birthMonth') || '';
-    const initialSubcategory = searchParams.get('subcategory') || '';
 
     const [filters, setFilters] = useState({
         page: 1,
@@ -85,8 +84,7 @@ const Shop = () => {
         minPrice: '',
         maxPrice: '',
         sort: 'newest',
-        birthMonth: initialBirthMonth,
-        subcategory: initialSubcategory
+        birthMonth: initialBirthMonth
     });
 
     // Temporary filter inputs (before apply)
@@ -96,8 +94,7 @@ const Shop = () => {
         minPrice: '',
         maxPrice: '',
         sort: 'newest',
-        birthMonth: initialBirthMonth,
-        subcategory: initialSubcategory
+        birthMonth: initialBirthMonth
     });
 
     const {
@@ -108,20 +105,10 @@ const Shop = () => {
         minPrice,
         maxPrice,
         sort,
-        birthMonth,
-        subcategory
+        birthMonth
     } = filters;
 
     const categoryKey = categoryFilter.join('|');
-    const availableSubcategories = useMemo(() => {
-        const subcategorySet = new Set();
-        gems.forEach(gem => {
-            if (gem?.subcategory) {
-                subcategorySet.add(gem.subcategory);
-            }
-        });
-        return Array.from(subcategorySet).sort((a, b) => a.localeCompare(b));
-    }, [gems]);
 
     const displayedGems = useMemo(() => {
         if (!Array.isArray(gems)) {
@@ -153,7 +140,6 @@ const Shop = () => {
             if (minPrice) params.minPrice = minPrice;
             if (maxPrice) params.maxPrice = maxPrice;
             if (sort) params.sort = sort;
-            if (subcategory) params.subcategory = subcategory;
             if (birthMonth) params.birthMonth = birthMonth;
 
             const response = await gemAPI.getGems(params);
@@ -172,7 +158,7 @@ const Shop = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey, subcategory]);
+    }, [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey]);
 
     // Fetch categories
     const fetchCategories = useCallback(async () => {
@@ -216,9 +202,8 @@ const Shop = () => {
         maxPrice,
         sort,
         birthMonth,
-        categoryKey,
-        subcategory
-    }), [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey, subcategory]);
+        categoryKey
+    }), [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey]);
 
     const lastFetchKeyRef = useRef('');
 
@@ -244,15 +229,12 @@ const Shop = () => {
         const updatedSearch = params.get('query') || '';
         const updatedCategories = parseCategoryParam(params.get('category'));
         const updatedBirthMonth = params.get('birthMonth') || '';
-        const updatedSubcategory = params.get('subcategory') || '';
 
         setFilters(prev => {
             const isSameSearch = prev.search === updatedSearch;
             const isSameCategories = arraysAreEqual(prev.category, updatedCategories);
             const isSameBirthMonth = prev.birthMonth === updatedBirthMonth;
-            const isSameSubcategory = prev.subcategory === updatedSubcategory;
-
-            if (isSameSearch && isSameCategories && isSameBirthMonth && isSameSubcategory) {
+            if (isSameSearch && isSameCategories && isSameBirthMonth) {
                 return prev;
             }
 
@@ -261,7 +243,6 @@ const Shop = () => {
                 search: updatedSearch,
                 category: updatedCategories,
                 birthMonth: updatedBirthMonth,
-                subcategory: updatedSubcategory,
                 page: 1
             };
         });
@@ -270,9 +251,8 @@ const Shop = () => {
             const isSameSearch = prev.search === updatedSearch;
             const isSameCategories = arraysAreEqual(prev.category, updatedCategories);
             const isSameBirthMonth = prev.birthMonth === updatedBirthMonth;
-            const isSameSubcategory = prev.subcategory === updatedSubcategory;
 
-            if (isSameSearch && isSameCategories && isSameBirthMonth && isSameSubcategory) {
+            if (isSameSearch && isSameCategories && isSameBirthMonth) {
                 return prev;
             }
 
@@ -280,8 +260,7 @@ const Shop = () => {
                 ...prev,
                 search: updatedSearch,
                 category: updatedCategories,
-                birthMonth: updatedBirthMonth,
-                subcategory: updatedSubcategory
+                birthMonth: updatedBirthMonth
             };
         });
 
@@ -293,15 +272,13 @@ const Shop = () => {
         if (filters.search) params.set('query', filters.search);
         if (filters.category && filters.category.length > 0) params.set('category', filters.category.join(','));
         if (filters.birthMonth) params.set('birthMonth', filters.birthMonth);
-        if (filters.subcategory) params.set('subcategory', filters.subcategory);
-
         const nextQuery = params.toString();
         if (lastSyncedQueryRef.current === nextQuery) {
             return;
         }
         lastSyncedQueryRef.current = nextQuery;
         navigate(nextQuery ? `/shop?${nextQuery}` : '/shop', { replace: true });
-    }, [filters.search, filters.category, filters.birthMonth, filters.subcategory, navigate]);
+    }, [filters.search, filters.category, filters.birthMonth, navigate]);
 
     // Handle apply filters
     const handleApplyFilters = () => {
@@ -313,7 +290,6 @@ const Shop = () => {
             maxPrice: tempFilters.maxPrice,
             sort: tempFilters.sort,
             birthMonth: tempFilters.birthMonth,
-            subcategory: tempFilters.subcategory,
             page: 1 // Reset to first page when filters change
         }));
     };
@@ -390,8 +366,7 @@ const Shop = () => {
             minPrice: '',
             maxPrice: '',
             sort: 'newest',
-            birthMonth: '',
-            subcategory: ''
+            birthMonth: ''
         };
         setFilters(resetFilters);
         setTempFilters({
@@ -400,8 +375,7 @@ const Shop = () => {
             minPrice: '',
             maxPrice: '',
             sort: 'newest',
-            birthMonth: '',
-            subcategory: ''
+            birthMonth: ''
         });
     };
 
@@ -415,7 +389,6 @@ const Shop = () => {
             discountType: gem.discountType,
             image: gem.allImages?.[0] || gem.heroImage || gem.images?.[0] || null,
             category: gem.category,
-            subcategory: gem.subcategory,
             sizeWeight: gem.sizeWeight,
             sizeUnit: gem.sizeUnit,
             stock: gem.stock
@@ -562,21 +535,6 @@ const Shop = () => {
                 </div>
             </div>
 
-            {/* Subcategory Filter */}
-            <div className="mb-4 sm:mb-6">
-                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
-                    <MdCategory className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
-                    <span>Subcategory</span>
-                </label>
-                <input
-                    type="text"
-                    value={tempFilters.subcategory}
-                    onChange={(e) => setTempFilters(prev => ({ ...prev, subcategory: e.target.value }))}
-                    placeholder="e.g., Burma Ruby"
-                    list="shop-subcategory-options"
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                />
-            </div>
 
             {/* Price Range */}
             <div className="mb-4 sm:mb-6">
@@ -696,11 +654,6 @@ const Shop = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-blue-50/30">
-            <datalist id="shop-subcategory-options">
-                {availableSubcategories.map(option => (
-                    <option key={option} value={option} />
-                ))}
-            </datalist>
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-4 sm:pb-6 md:pb-8 lg:pb-12">
                 {/* Mobile Filter Button - Only visible on small/medium screens */}
@@ -711,13 +664,12 @@ const Shop = () => {
                     >
                         <FaFilter className="w-5 h-5" />
                         <span>Filters</span>
-                        {(filters.search || filters.category.length > 0 || filters.minPrice || filters.maxPrice || filters.subcategory || filters.birthMonth || filters.sort !== 'newest') && (
+                        {(filters.search || filters.category.length > 0 || filters.minPrice || filters.maxPrice || filters.birthMonth || filters.sort !== 'newest') && (
                             <span className="bg-white text-emerald-600 rounded-full px-2 py-0.5 text-xs font-bold">
                                 {[
                                     filters.search ? 1 : 0,
                                     filters.category.length,
                                     (filters.minPrice || filters.maxPrice) ? 1 : 0,
-                                    filters.subcategory ? 1 : 0,
                                     filters.birthMonth ? 1 : 0,
                                     filters.sort !== 'newest' ? 1 : 0
                                 ].reduce((a, b) => a + b, 0)}
@@ -800,22 +752,6 @@ const Shop = () => {
                                         </button>
                                     </span>
                                 ))}
-                                {filters.subcategory && (
-                                    <span className="bg-indigo-100 text-indigo-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 font-medium">
-                                        <MdCategory className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                        <span className="truncate max-w-[120px] sm:max-w-none">{filters.subcategory}</span>
-                                        <button
-                                            onClick={() => {
-                                                setFilters(prev => ({ ...prev, subcategory: '' }));
-                                                setTempFilters(prev => ({ ...prev, subcategory: '' }));
-                                            }}
-                                            className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors flex-shrink-0"
-                                            aria-label="Remove subcategory filter"
-                                        >
-                                            <FaTimes className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                        </button>
-                                    </span>
-                                )}
                                 {(filters.minPrice || filters.maxPrice) && (
                                     <span className="bg-purple-100 text-purple-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 font-medium">
                                         <FaRupeeSign className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
