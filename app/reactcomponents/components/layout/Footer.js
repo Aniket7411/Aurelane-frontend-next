@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Link } from '../../lib/nextRouterAdapter';
 import { FaPhone, FaArrowUp } from 'react-icons/fa';
 
 const Footer = () => {
@@ -149,6 +148,52 @@ const Footer = () => {
                                 }}
                             />
                         </div>
+                    </div>
+                </div>
+
+                {/* Footer Links */}
+                <div className="border-t border-gray-200 pt-6 sm:pt-8 pb-4 sm:pb-6">
+                    <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8">
+                        <a 
+                            href="/terms-and-conditions" 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs sm:text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                        >
+                            Terms & Conditions
+                        </a>
+                        <a 
+                            href="/privacy-policy" 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs sm:text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                        >
+                            Privacy Policy
+                        </a>
+                        <a 
+                            href="/cancellation-refund-policy" 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs sm:text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                        >
+                            Cancellation & Refund Policy
+                        </a>
+                        <a 
+                            href="/delivery-service-policy" 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs sm:text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                        >
+                            Delivery / Service Policy
+                        </a>
+                        <a 
+                            href="/contact" 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs sm:text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                        >
+                            Contact Us
+                        </a>
                     </div>
                 </div>
 

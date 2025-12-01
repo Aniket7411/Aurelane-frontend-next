@@ -116,14 +116,14 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                             style={isWishlisted ? { fill: 'currentColor' } : {}}
                         />
                     </button>
-                    <Link
+                    {/* <Link
                         to={`/gem/${gem._id || gem.id}`}
                         onClick={(e) => e.stopPropagation()}
                         className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-white/90 backdrop-blur-sm text-gray-600 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all duration-200 shadow-md"
                         aria-label="View gem details"
                     >
                         <FaEye className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                    </Link>
+                    </Link> */}
                 </div>
             </div>
 

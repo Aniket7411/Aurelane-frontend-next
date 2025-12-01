@@ -47,6 +47,11 @@ import AdminSellers from './components/admin/allsellers';
 import SellerProfileSetup from './components/seller/seller';
 import BuyerProfile from './pages/buyerprofile';
 import AurelaneAbout from './pages/aboutus';
+import TermsAndConditions from './pages/TermsAndConditions';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import CancellationRefundPolicy from './pages/CancellationRefundPolicy';
+import DeliveryServicePolicy from './pages/DeliveryServicePolicy';
+import Contact from './pages/Contact';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -389,6 +394,36 @@ function App() {
                 path="/aboutus"
                 element={<MainLayout>
                   <AurelaneAbout />
+                </MainLayout>}
+              />
+              <Route
+                path="/terms-and-conditions"
+                element={<MainLayout>
+                  <TermsAndConditions />
+                </MainLayout>}
+              />
+              <Route
+                path="/privacy-policy"
+                element={<MainLayout>
+                  <PrivacyPolicy />
+                </MainLayout>}
+              />
+              <Route
+                path="/cancellation-refund-policy"
+                element={<MainLayout>
+                  <CancellationRefundPolicy />
+                </MainLayout>}
+              />
+              <Route
+                path="/delivery-service-policy"
+                element={<MainLayout>
+                  <DeliveryServicePolicy />
+                </MainLayout>}
+              />
+              <Route
+                path="/contact"
+                element={<MainLayout>
+                  <Contact />
                 </MainLayout>}
               />
 
