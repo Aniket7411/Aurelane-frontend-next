@@ -104,6 +104,17 @@ export const gemCategoryHierarchy = [
         ]
     },
     {
+        category: 'Alexandrite',
+        subcategories: [
+            'Russian Alexandrite',
+            'Brazilian Alexandrite',
+            'Sri Lankan Alexandrite',
+            'Tanzanian Alexandrite',
+            'Indian Alexandrite',
+            'Other Alexandrite'
+        ]
+    },
+    {
         category: 'Custom',
         subcategories: [
             'Custom'

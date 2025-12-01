@@ -70,6 +70,8 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                         <img
                             src={gem.images?.[0] || gem.heroImage || gem.allImages?.[0]}
                             alt={gem.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 cursor-pointer"
                         />
                     ) : (
@@ -81,7 +83,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
 
                 {/* Badges */}
                 <div className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 flex flex-col gap-1.5 sm:gap-2">
-                    {gem.discount && gem.discount > 0 && (
+                    {(gem.discount && parseFloat(gem.discount) > 0) && (
                         <span className="bg-red-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold whitespace-nowrap">
                             {gem.discountType === 'percentage' ? `${gem.discount}% OFF` : `${formatPrice(gem.discount)} OFF`}
                         </span>

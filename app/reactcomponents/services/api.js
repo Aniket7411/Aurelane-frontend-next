@@ -2,9 +2,8 @@
 
 import axios from 'axios';
 
-// const API_BASE_URL = 'http://localhost:5000/api';
-const API_BASE_URL = 'https://aurelane-backend-next.onrender.com/api';
-console.log('API_BASE_URL', API_BASE_URL);
+const API_BASE_URL = 'http://localhost:5000/api';
+// const API_BASE_URL = 'https://aurelane-backend-next.onrender.com/api';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -20,6 +19,7 @@ const apiClient = axios.create({
 const DEFAULT_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 const requestCache = new Map();
 const inFlightRequests = new Map();
+const abortControllers = new Map();
 
 const buildCacheKey = (method, url, params = {}) => {
     const serializedParams = params && Object.keys(params).length > 0 ? JSON.stringify(params) : '';
@@ -43,11 +43,12 @@ const cachedGet = async (url, config = {}, options = {}) => {
         forceRefresh = false,
         ttl = DEFAULT_CACHE_TTL,
         cacheKey: customCacheKey,
-        enableCache = true
+        enableCache = true,
+        signal
     } = options;
 
     if (!enableCache) {
-        return apiClient.get(url, config);
+        return apiClient.get(url, { ...config, signal });
     }
 
     const params = config?.params || {};
@@ -64,7 +65,18 @@ const cachedGet = async (url, config = {}, options = {}) => {
         }
     }
 
-    const requestPromise = apiClient.get(url, config);
+    // Cancel previous request for the same key if it exists
+    if (abortControllers.has(key)) {
+        abortControllers.get(key).abort();
+        abortControllers.delete(key);
+    }
+
+    // Create new AbortController
+    const abortController = new AbortController();
+    const finalSignal = signal || abortController.signal;
+    abortControllers.set(key, abortController);
+
+    const requestPromise = apiClient.get(url, { ...config, signal: finalSignal });
     inFlightRequests.set(key, requestPromise);
 
     try {
@@ -75,8 +87,15 @@ const cachedGet = async (url, config = {}, options = {}) => {
             data: response
         });
         return response;
+    } catch (error) {
+        // Don't throw error if request was aborted
+        if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+            throw error;
+        }
+        throw error;
     } finally {
         inFlightRequests.delete(key);
+        abortControllers.delete(key);
     }
 };
 
@@ -92,9 +111,9 @@ const invalidateCache = (prefixes = []) => {
 };
 
 const GEM_CACHE_PREFIX = 'GET:/gems';
-const GEM_LIST_CACHE_TTL = 2 * 60 * 1000;
-const GEM_DETAIL_CACHE_TTL = 5 * 60 * 1000;
-const GEM_CATEGORY_CACHE_TTL = 10 * 60 * 1000;
+const GEM_LIST_CACHE_TTL = 5 * 60 * 1000; // Increased to 5 minutes
+const GEM_DETAIL_CACHE_TTL = 10 * 60 * 1000; // Increased to 10 minutes
+const GEM_CATEGORY_CACHE_TTL = 30 * 60 * 1000; // Increased to 30 minutes for static data
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
@@ -368,7 +387,7 @@ export const gemAPI = {
 
     // Get all gems
     getGems: async (params = {}, options = {}) => {
-        const { forceRefresh = false, cacheTtl = GEM_LIST_CACHE_TTL } = options;
+        const { forceRefresh = false, cacheTtl = GEM_LIST_CACHE_TTL, signal } = options;
         // Filter out empty values
         const filteredParams = Object.keys(params).reduce((acc, key) => {
             if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
@@ -379,7 +398,8 @@ export const gemAPI = {
 
         return cachedGet('/gems', { params: filteredParams }, {
             ttl: cacheTtl,
-            forceRefresh
+            forceRefresh,
+            signal
         });
     },
 

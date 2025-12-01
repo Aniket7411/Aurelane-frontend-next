@@ -49,6 +49,7 @@ The Shop page now filters **only by top-level category**. Backend responses must
 - Topaz & Quartz
 - Opal & Exotic
 - Cat's Eye & Hessonite
+- Alexandrite
 - Custom
 
 `GET /gems/categories` should return this array, and `GET /gems/category/:category` must respond with all gems that belong to the requested category (e.g., “Ruby” should return every Ruby variant).

@@ -71,6 +71,11 @@ const Shop = () => {
     const [loadingWishlist, setLoadingWishlist] = useState(false);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
 
+    // Refs for request cancellation and debouncing
+    const abortControllerRef = useRef(null);
+    const searchDebounceRef = useRef(null);
+    const wishlistFetchedRef = useRef(false);
+
     // Filter states
     const initialSearch = searchParams.get('query') || '';
     const initialCategories = parseCategoryParam(searchParams.get('category'));
@@ -126,8 +131,17 @@ const Shop = () => {
         });
     }, [gems, sort]);
 
-    // Fetch gems
+    // Fetch gems with request cancellation
     const fetchGems = useCallback(async () => {
+        // Cancel previous request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        // Create new AbortController
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
         try {
             setLoading(true);
             setError(null);
@@ -142,9 +156,14 @@ const Shop = () => {
             if (sort) params.sort = sort;
             if (birthMonth) params.birthMonth = birthMonth;
 
-            const response = await gemAPI.getGems(params);
+            const response = await gemAPI.getGems(params, {
+                signal: abortController.signal
+            });
 
-            console.log("response", response);
+            // Check if request was aborted
+            if (abortController.signal.aborted) {
+                return;
+            }
 
             if (response.success) {
                 setGems(response.data?.gems || response.gems || []);
@@ -153,10 +172,16 @@ const Shop = () => {
                 setError('Failed to fetch gems');
             }
         } catch (err) {
+            // Don't set error if request was aborted
+            if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') {
+                return;
+            }
             console.error('Error fetching gems:', err);
             setError(err.message || 'Failed to fetch gems');
         } finally {
-            setLoading(false);
+            if (!abortController.signal.aborted) {
+                setLoading(false);
+            }
         }
     }, [page, limit, search, minPrice, maxPrice, sort, birthMonth, categoryKey]);
 
@@ -172,10 +197,16 @@ const Shop = () => {
         }
     }, []);
 
-    // Fetch wishlist
+    // Fetch wishlist (only once per session)
     const fetchWishlist = useCallback(async () => {
         if (!isAuthenticated) {
             setWishlist(new Set());
+            wishlistFetchedRef.current = false;
+            return;
+        }
+
+        // Only fetch once per session unless forced
+        if (wishlistFetchedRef.current) {
             return;
         }
 
@@ -187,6 +218,7 @@ const Shop = () => {
                     response.items.map(item => item.gem?._id || item.gem?.id || item.gem)
                 );
                 setWishlist(wishlistIds);
+                wishlistFetchedRef.current = true;
             }
         } catch (err) {
             console.error('Error fetching wishlist:', err);
@@ -216,19 +248,43 @@ const Shop = () => {
         fetchGems();
     }, [filtersKey, fetchGems]);
 
+    // Fetch categories only once on mount
     useEffect(() => {
         fetchCategories();
-    }, [fetchCategories]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
+    // Fetch wishlist only when authentication status changes
     useEffect(() => {
         fetchWishlist();
     }, [fetchWishlist]);
 
+    // Cleanup on unmount
     useEffect(() => {
+        return () => {
+            // Cancel any pending requests
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            // Clear debounce timer
+            if (searchDebounceRef.current) {
+                clearTimeout(searchDebounceRef.current);
+            }
+        };
+    }, []);
+
+    // Memoize URL params parsing to avoid unnecessary recalculations
+    const urlParams = useMemo(() => {
         const params = new URLSearchParams(currentSearchString);
-        const updatedSearch = params.get('query') || '';
-        const updatedCategories = parseCategoryParam(params.get('category'));
-        const updatedBirthMonth = params.get('birthMonth') || '';
+        return {
+            search: params.get('query') || '',
+            categories: parseCategoryParam(params.get('category')),
+            birthMonth: params.get('birthMonth') || ''
+        };
+    }, [currentSearchString]);
+
+    useEffect(() => {
+        const { search: updatedSearch, categories: updatedCategories, birthMonth: updatedBirthMonth } = urlParams;
 
         setFilters(prev => {
             const isSameSearch = prev.search === updatedSearch;
@@ -265,7 +321,7 @@ const Shop = () => {
         });
 
         lastSyncedQueryRef.current = currentSearchString;
-    }, [currentSearchString]);
+    }, [urlParams, currentSearchString]);
 
     useEffect(() => {
         const params = new URLSearchParams();
@@ -294,17 +350,36 @@ const Shop = () => {
         }));
     };
 
-    // Handle search input
+    // Handle search input with debouncing
     const handleSearchChange = (e) => {
+        const value = e.target.value;
         setTempFilters(prev => ({
             ...prev,
-            search: e.target.value
+            search: value
         }));
+
+        // Clear previous debounce
+        if (searchDebounceRef.current) {
+            clearTimeout(searchDebounceRef.current);
+        }
+
+        // Debounce search - only update filters after user stops typing for 500ms
+        searchDebounceRef.current = setTimeout(() => {
+            setFilters(prev => ({
+                ...prev,
+                search: value,
+                page: 1
+            }));
+        }, 500);
     };
 
     // Handle search submit
     const handleSearchSubmit = (e) => {
         e.preventDefault();
+        // Clear debounce
+        if (searchDebounceRef.current) {
+            clearTimeout(searchDebounceRef.current);
+        }
         setFilters(prev => ({
             ...prev,
             search: tempFilters.search,
@@ -436,6 +511,9 @@ const Shop = () => {
                 }
                 showSuccess(`❤️ ${gem.name} added to wishlist`);
             }
+
+            // Update wishlist fetched flag to allow refetch if needed
+            wishlistFetchedRef.current = false;
         } catch (error) {
             console.error('Error toggling wishlist:', error);
             // Revert optimistic update on error
