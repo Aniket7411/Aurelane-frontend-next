@@ -2,8 +2,8 @@
 
 import axios from 'axios';
 
-// const API_BASE_URL = 'http://localhost:5000/api';
-const API_BASE_URL = 'https://aurelane-backend-next.onrender.com/api';
+const API_BASE_URL = 'http://localhost:5000/api';
+// const API_BASE_URL = 'https://aurelane-backend-next.onrender.com/api';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -514,6 +514,24 @@ export const orderAPI = {
     cancelOrder: async (orderId, reason) => {
         return apiClient.put(`/orders/${orderId}/cancel`, { reason });
     },
+};
+
+// Payment API for Razorpay integration
+export const paymentAPI = {
+    // Create payment order (creates order + Razorpay order)
+    createPaymentOrder: async (orderData) => {
+        return apiClient.post('/payments/create-order', orderData);
+    },
+
+    // Verify payment after Razorpay payment
+    verifyPayment: async (paymentData) => {
+        return apiClient.post('/payments/verify-payment', paymentData);
+    },
+
+    // Get order payment status
+    getOrderPaymentStatus: async (orderId) => {
+        return apiClient.get(`/payments/order-status/${orderId}`);
+    },
 
     // Get order tracking details
     trackOrder: async (orderId) => {
@@ -750,5 +768,5 @@ export const healthCheck = async () => {
     return apiClient.get('/health');
 };
 
-const api = { authAPI, gemAPI, cartAPI, orderAPI, otpAPI, reviewAPI, wishlistAPI, adminAPI, healthCheck };
+const api = { authAPI, gemAPI, cartAPI, orderAPI, paymentAPI, otpAPI, reviewAPI, wishlistAPI, adminAPI, healthCheck };
 export default api;

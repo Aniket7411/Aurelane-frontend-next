@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
-import { orderAPI } from '../services/api';
+import { orderAPI, paymentAPI } from '../services/api';
 import { FaCreditCard, FaTruck, FaCheck, FaLock } from 'react-icons/fa';
 import { useToast } from '../contexts/ToastContext';
 
@@ -22,14 +22,15 @@ const Checkout = () => {
 
     // Form states
     const [shippingAddress, setShippingAddress] = useState({
-        firstName: user?.name?.split(' ')[0] || '',
-        lastName: user?.name?.split(' ').slice(1).join(' ') || '',
+        name: user?.name || '',
         email: user?.email || '',
         phone: user?.phoneNumber || '',
-        address: '',
+        addressLine1: '',
+        addressLine2: '',
         city: '',
         state: '',
-        pincode: ''
+        pincode: '',
+        country: 'India'
     });
 
     const [paymentMethod, setPaymentMethod] = useState('cod');
@@ -53,79 +54,117 @@ const Checkout = () => {
     };
 
 
-    const handleOnlinePayment = async (orderId, amount) => {
+    // Load Razorpay script
+    useEffect(() => {
+        const loadRazorpayScript = () => {
+            return new Promise((resolve, reject) => {
+                if (window.Razorpay) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                script.async = true;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error('Failed to load Razorpay script'));
+                document.body.appendChild(script);
+            });
+        };
+
+        loadRazorpayScript().catch(err => {
+            console.error('Error loading Razorpay:', err);
+        });
+    }, []);
+
+    // Initialize Razorpay checkout
+    const initializeRazorpay = (razorpayOrder, keyId, orderId) => {
+        if (!window.Razorpay) {
+            showError('Payment gateway not loaded. Please refresh the page.');
+            setLoading(false);
+            return;
+        }
+
+        const options = {
+            key: keyId, // From backend response
+            amount: razorpayOrder.amount, // Amount in paise (already from backend)
+            currency: razorpayOrder.currency,
+            name: 'Aurelane',
+            description: `Order ${razorpayOrder.receipt}`,
+            order_id: razorpayOrder.id, // Razorpay order ID
+            handler: async function (response) {
+                // Payment successful - verify payment
+                await verifyPayment(response, orderId);
+            },
+            prefill: {
+                name: shippingAddress.name,
+                email: shippingAddress.email,
+                contact: shippingAddress.phone
+            },
+            notes: {
+                orderId: orderId,
+                orderNotes: orderNotes
+            },
+            theme: {
+                color: '#059669'
+            },
+            modal: {
+                ondismiss: function () {
+                    // User closed the payment modal
+                    setLoading(false);
+                    showWarning('Payment cancelled by user');
+                }
+            }
+        };
+
+        const razorpay = new window.Razorpay(options);
+        
+        razorpay.on('payment.failed', function (response) {
+            // Payment failed
+            setLoading(false);
+            navigate(`/payment-failure?orderId=${orderId}&message=${response.error.description || 'Payment failed'}&reason=${response.error.reason || 'unknown'}`);
+        });
+
+        razorpay.open();
+    };
+
+    // Verify payment after successful Razorpay payment
+    const verifyPayment = async (razorpayResponse, orderId) => {
         try {
-            // Note: Payment gateways (Razorpay/Stripe) require payment in specific currencies
-            // Razorpay only supports INR, so we always use the base currency amount
-            // The 'amount' parameter here should already be in INR (base currency)
-            // as it comes from cartSummary.total which is stored in INR
-            const paymentAmount = amount; // This should already be in INR
+            setLoading(true);
+            const response = await paymentAPI.verifyPayment({
+                razorpay_order_id: razorpayResponse.razorpay_order_id,
+                razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                razorpay_signature: razorpayResponse.razorpay_signature,
+                orderId: orderId
+            });
+
+            const data = response.data || response;
             
-            // Load Razorpay script
-            const script = document.createElement('script');
-            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-            script.async = true;
-            document.body.appendChild(script);
-
-            script.onload = () => {
-                const options = {
-                    key: process.env.REACT_APP_RAZORPAY_KEY || 'rzp_test_xxxxxxxxxx', // Replace with actual key
-                    amount: paymentAmount * 100, // Amount in paise (Razorpay only supports INR)
-                    currency: 'INR',
-                    name: 'Aurelane Gems',
-                    description: `Order #${orderId}`,
-                    image: '/logo192.png',
-                    order_id: orderId,
-                    handler: function (response) {
-                        // Payment successful
-                        clearCart();
-                        navigate(`/payment-success?orderId=${orderId}&paymentId=${response.razorpay_payment_id}&amount=${amount}`);
-                    },
-                    prefill: {
-                        name: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
-                        email: shippingAddress.email,
-                        contact: shippingAddress.phone
-                    },
-                    notes: {
-                        orderId: orderId,
-                        orderNotes: orderNotes
-                    },
-                    theme: {
-                        color: '#059669'
-                    },
-                    modal: {
-                        ondismiss: function () {
-                            // Payment cancelled
-                            setLoading(false);
-                            navigate(`/payment-failure?orderId=${orderId}&message=Payment cancelled by user`);
-                        }
-                    }
-                };
-
-                const razorpay = new window.Razorpay(options);
-                razorpay.on('payment.failed', function (response) {
-                    // Payment failed
-                    navigate(`/payment-failure?orderId=${orderId}&message=${response.error.description}&reason=${response.error.reason}`);
-                });
-                razorpay.open();
-            };
-
-            script.onerror = () => {
-                showError('Failed to load payment gateway. Please try again.');
-                setLoading(false);
-            };
+            if (data.success) {
+                // Payment verified successfully
+                clearCart();
+                navigate(`/payment-success?orderId=${orderId}&paymentId=${razorpayResponse.razorpay_payment_id}&amount=${cartSummary.total}`);
+            } else {
+                showError(data.message || 'Payment verification failed');
+                navigate(`/payment-failure?orderId=${orderId}&message=${data.message || 'Payment verification failed'}`);
+            }
         } catch (error) {
-            console.error('Payment error:', error);
-            showError('Payment initialization failed. Please try again.');
+            console.error('Error verifying payment:', error);
+            const errorMessage = error.response?.data?.message || 'Error verifying payment. Please contact support.';
+            showError(errorMessage);
+            navigate(`/payment-failure?orderId=${orderId}&message=${errorMessage}`);
+        } finally {
             setLoading(false);
         }
     };
 
     const validateForm = () => {
-        const required = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'pincode'];
+        const required = ['name', 'email', 'phone', 'addressLine1', 'city', 'state', 'pincode'];
         for (const field of required) {
-            if (!shippingAddress[field].trim()) {
-                showWarning(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+            if (!shippingAddress[field] || !shippingAddress[field].trim()) {
+                const fieldName = field.replace(/([A-Z])/g, ' $1').toLowerCase().replace('address line', 'address');
+                showWarning(`Please fill in ${fieldName}`);
                 return false;
             }
         }
@@ -145,43 +184,128 @@ const Checkout = () => {
     const proceedWithOrder = async () => {
         setLoading(true);
         try {
-            const orderData = {
-                items: cartItems.map(item => ({
-                    gemId: item.id,
-                    quantity: item.quantity,
-                    price: item.discount && item.discount > 0
-                        ? item.discountType === 'percentage'
-                            ? item.price - (item.price * item.discount) / 100
-                            : item.price - item.discount
-                        : item.price
-                })),
-                shippingAddress,
-                paymentMethod,
-                orderNotes,
-                totalAmount: cartSummary.total
-            };
+            // Prepare order data based on payment method
+            if (paymentMethod === 'online') {
+                // For online payment, use payment API which creates order + Razorpay order
+                // Round prices to avoid decimal issues
+                const orderData = {
+                    items: cartItems.map(item => {
+                        let itemPrice = item.discount && item.discount > 0
+                            ? item.discountType === 'percentage'
+                                ? item.price - (item.price * item.discount) / 100
+                                : item.price - item.discount
+                            : item.price;
+                        // Round to 2 decimal places for price
+                        itemPrice = Math.round(itemPrice * 100) / 100;
+                        return {
+                            gem: item.id,
+                            quantity: item.quantity,
+                            price: itemPrice,
+                            image: item.image || item.images?.[0] || null,
+                            name: item.name || null
+                        };
+                    }),
+                    shippingAddress: {
+                        name: shippingAddress.name,
+                        phone: shippingAddress.phone,
+                        addressLine1: shippingAddress.addressLine1,
+                        addressLine2: shippingAddress.addressLine2 || '',
+                        city: shippingAddress.city,
+                        state: shippingAddress.state,
+                        pincode: shippingAddress.pincode,
+                        country: shippingAddress.country || 'India'
+                    },
+                    totalPrice: Math.round(cartSummary.total * 100) / 100
+                };
 
-            const response = await orderAPI.createOrder(orderData);
+                const response = await paymentAPI.createPaymentOrder(orderData);
+                const data = response.data || response;
 
-            if (response.success) {
-                const createdOrderId = response.data?.orderId || response.order?.id || response.orderId;
-
-                // If payment method is online, initiate payment gateway
-                if (paymentMethod === 'online') {
-                    await handleOnlinePayment(createdOrderId, cartSummary.total);
+                if (data.success) {
+                    const createdOrderId = data.order?._id || data.order?.id || data.orderId;
+                    
+                    // Check if required Razorpay data is present
+                    if (!data.razorpayOrder || !data.keyId) {
+                        showError('Invalid response from payment server. Please try again.');
+                        setLoading(false);
+                        return;
+                    }
+                    
+                    // Initialize Razorpay with returned data
+                    initializeRazorpay(
+                        data.razorpayOrder,
+                        data.keyId,
+                        createdOrderId
+                    );
                 } else {
-                    // For COD, directly show success
+                    const errorMsg = data.message || data.error?.description || 'Failed to create payment order. Please try again.';
+                    showError(errorMsg);
+                    setLoading(false);
+                }
+            } else {
+                // For COD, use regular order API
+                const orderData = {
+                    items: cartItems.map(item => {
+                        let itemPrice = item.discount && item.discount > 0
+                            ? item.discountType === 'percentage'
+                                ? item.price - (item.price * item.discount) / 100
+                                : item.price - item.discount
+                            : item.price;
+                        // Round to 2 decimal places for price
+                        itemPrice = Math.round(itemPrice * 100) / 100;
+                        return {
+                            gemId: item.id,
+                            quantity: item.quantity,
+                            price: itemPrice,
+                            image: item.image || item.images?.[0] || null,
+                            name: item.name || null
+                        };
+                    }),
+                    shippingAddress: {
+                        name: shippingAddress.name,
+                        phone: shippingAddress.phone,
+                        addressLine1: shippingAddress.addressLine1,
+                        addressLine2: shippingAddress.addressLine2 || '',
+                        city: shippingAddress.city,
+                        state: shippingAddress.state,
+                        pincode: shippingAddress.pincode,
+                        country: shippingAddress.country || 'India'
+                    },
+                    paymentMethod,
+                    orderNotes,
+                    totalAmount: cartSummary.total
+                };
+
+                const response = await orderAPI.createOrder(orderData);
+                const data = response.data || response;
+
+                if (data.success || response.status === 200 || response.status === 201) {
+                    const createdOrderId = data.orderId || data.order?.id || data.order?._id;
                     setOrderId(createdOrderId);
                     clearCart();
                     navigate(`/payment-success?orderId=${createdOrderId}&amount=${cartSummary.total}`);
+                } else {
+                    showError(data.message || response.message || 'Failed to place order. Please try again.');
                 }
-            } else {
-                showError(response.message || 'Failed to place order. Please try again.');
+                setLoading(false);
             }
         } catch (error) {
             console.error('Error placing order:', error);
-            showError(error.message || 'Failed to place order. Please try again.');
-        } finally {
+            let errorMessage = 'Failed to place order. Please try again.';
+            
+            if (error.response?.data) {
+                const errorData = error.response.data;
+                errorMessage = errorData.message || errorData.error?.description || errorMessage;
+                
+                // Handle specific backend validation errors
+                if (errorMessage.includes('orderNumber')) {
+                    errorMessage = 'Backend error: Order number generation failed. Please contact support.';
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            showError(errorMessage);
             setLoading(false);
         }
     };
@@ -230,23 +354,12 @@ const Checkout = () => {
                         <div className="bg-white rounded-2xl shadow-sm p-6">
                             <h2 className="text-xl font-bold text-gray-900 mb-6">Shipping Address</h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                                     <input
                                         type="text"
-                                        name="firstName"
-                                        value={shippingAddress.firstName}
-                                        onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
-                                    <input
-                                        type="text"
-                                        name="lastName"
-                                        value={shippingAddress.lastName}
+                                        name="name"
+                                        value={shippingAddress.name}
                                         onChange={handleInputChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                         required
@@ -275,14 +388,26 @@ const Checkout = () => {
                                     />
                                 </div>
                                 <div className="sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-                                    <textarea
-                                        name="address"
-                                        value={shippingAddress.address}
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 1 *</label>
+                                    <input
+                                        type="text"
+                                        name="addressLine1"
+                                        value={shippingAddress.addressLine1}
                                         onChange={handleInputChange}
-                                        rows={3}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                        placeholder="Street address, P.O. box"
                                         required
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
+                                    <input
+                                        type="text"
+                                        name="addressLine2"
+                                        value={shippingAddress.addressLine2}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                        placeholder="Apartment, suite, unit, building, floor, etc."
                                     />
                                 </div>
                                 <div>
@@ -313,6 +438,17 @@ const Checkout = () => {
                                         type="text"
                                         name="pincode"
                                         value={shippingAddress.pincode}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                                    <input
+                                        type="text"
+                                        name="country"
+                                        value={shippingAddress.country}
                                         onChange={handleInputChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                         required
@@ -488,19 +624,23 @@ const Checkout = () => {
 
                             <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
                                 <p className="font-semibold text-gray-900">
-                                    {shippingAddress.firstName} {shippingAddress.lastName}
+                                    {shippingAddress.name}
                                 </p>
                                 <p className="text-gray-600 text-sm">
-                                    {shippingAddress.address}
+                                    {shippingAddress.addressLine1}
+                                    {shippingAddress.addressLine2 && `, ${shippingAddress.addressLine2}`}
                                 </p>
                                 <p className="text-gray-600 text-sm">
                                     {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}
                                 </p>
                                 <p className="text-gray-600 text-sm">
-                                    {shippingAddress.phone}
+                                    {shippingAddress.country}
                                 </p>
                                 <p className="text-gray-600 text-sm">
-                                    {shippingAddress.email}
+                                    Phone: {shippingAddress.phone}
+                                </p>
+                                <p className="text-gray-600 text-sm">
+                                    Email: {shippingAddress.email}
                                 </p>
                             </div>
 
