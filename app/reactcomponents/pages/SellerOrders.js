@@ -170,11 +170,12 @@ const SellerOrders = () => {
     };
 
     const formatPrice = (price) => {
+        const numPrice = Number(price) || 0;
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
             maximumFractionDigits: 0,
-        }).format(price);
+        }).format(numPrice);
     };
 
     if (loading) {
@@ -355,7 +356,7 @@ const SellerOrders = () => {
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0 pt-4 border-t">
                                     <div>
                                         <p className="text-sm text-gray-600">Total Amount</p>
-                                        <p className="text-xl font-bold text-gray-900">{formatPrice(order.totalAmount)}</p>
+                                        <p className="text-xl font-bold text-gray-900">{formatPrice(order.totalPrice || order.totalAmount || order.total || 0)}</p>
                                     </div>
                                     <div className="flex space-x-2">
                                         {getNextStatus(order.status) && (
@@ -466,7 +467,7 @@ const SellerOrders = () => {
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
                                             <span className="text-gray-600">Subtotal</span>
-                                            <span className="font-medium">{formatPrice(selectedOrder.totalAmount)}</span>
+                                            <span className="font-medium">{formatPrice(selectedOrder.totalPrice || selectedOrder.totalAmount || selectedOrder.total || 0)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-gray-600">Shipping</span>
@@ -474,8 +475,8 @@ const SellerOrders = () => {
                                         </div>
                                         <div className="border-t pt-2">
                                             <div className="flex justify-between text-base font-semibold">
-                                                <span>Total</span>
-                                                <span>{formatPrice(selectedOrder.totalAmount)}</span>
+                                                <span>Total Amount</span>
+                                                <span>{formatPrice(selectedOrder.totalPrice || selectedOrder.totalAmount || selectedOrder.total || 0)}</span>
                                             </div>
                                         </div>
                                     </div>

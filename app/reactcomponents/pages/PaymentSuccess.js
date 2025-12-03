@@ -120,7 +120,7 @@ const PaymentSuccess = () => {
                         <div className="flex justify-between items-center">
                             <span className="text-gray-600">Amount Paid</span>
                             <span className="font-bold text-emerald-600 text-xl">
-                                ₹{amount ? parseFloat(amount).toLocaleString() : orderDetails?.totalAmount?.toLocaleString() || 'N/A'}
+                                ₹{amount ? parseFloat(amount).toLocaleString() : (orderDetails?.totalAmount || orderDetails?.totalPrice || orderDetails?.total || 0).toLocaleString()}
                             </span>
                         </div>
                         <div className="flex justify-between items-center">

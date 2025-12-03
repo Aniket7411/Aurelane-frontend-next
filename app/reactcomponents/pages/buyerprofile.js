@@ -745,7 +745,7 @@ const BuyerProfile = () => {
                                                 <div>
                                                     <p className="text-xs sm:text-sm text-gray-600">Total Amount</p>
                                                     <p className="text-lg sm:text-xl font-bold text-gray-900">
-                                                        ₹{order.totalAmount.toLocaleString()}
+                                                        ₹{(order.totalAmount || order.totalPrice || order.total || 0).toLocaleString()}
                                                     </p>
                                                 </div>
                                                 <button
@@ -847,7 +847,7 @@ const BuyerProfile = () => {
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm sm:text-base">
                                         <span className="text-gray-600">Subtotal</span>
-                                        <span className="font-medium">₹{selectedOrder.totalAmount.toLocaleString()}</span>
+                                        <span className="font-medium">₹{(selectedOrder.totalAmount || selectedOrder.totalPrice || selectedOrder.total || 0).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between text-sm sm:text-base">
                                         <span className="text-gray-600">Shipping</span>
@@ -855,8 +855,8 @@ const BuyerProfile = () => {
                                     </div>
                                     <div className="border-t pt-2">
                                         <div className="flex justify-between text-base sm:text-lg font-semibold">
-                                            <span>Total</span>
-                                            <span>₹{selectedOrder.totalAmount.toLocaleString()}</span>
+                                            <span>Total Amount</span>
+                                            <span>₹{(selectedOrder.totalAmount || selectedOrder.totalPrice || selectedOrder.total || 0).toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -514,6 +514,33 @@ export const orderAPI = {
     cancelOrder: async (orderId, reason) => {
         return apiClient.put(`/orders/${orderId}/cancel`, { reason });
     },
+
+    // Seller-specific order functions
+    // Get seller orders
+    getSellerOrders: async (params = {}) => {
+        const filteredParams = Object.keys(params).reduce((acc, key) => {
+            if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+                acc[key] = params[key];
+            }
+            return acc;
+        }, {});
+        return apiClient.get('/orders/seller/orders', { params: filteredParams });
+    },
+
+    // Get seller order by ID
+    getSellerOrderById: async (orderId) => {
+        return apiClient.get(`/orders/seller/orders/${orderId}`);
+    },
+
+    // Update order status (seller)
+    updateOrderStatus: async (orderId, status, trackingData = {}) => {
+        return apiClient.put(`/orders/${orderId}/status`, { status, ...trackingData });
+    },
+
+    // Get seller order stats
+    getSellerOrderStats: async () => {
+        return apiClient.get('/orders/seller/orders/stats');
+    }
 };
 
 // Payment API for Razorpay integration
@@ -541,33 +568,6 @@ export const paymentAPI = {
     // Get order invoice
     getOrderInvoice: async (orderId) => {
         return apiClient.get(`/orders/${orderId}/invoice`, { responseType: 'blob' });
-    },
-
-    // Seller-specific order functions
-    // Get seller orders
-    getSellerOrders: async (params = {}) => {
-        const filteredParams = Object.keys(params).reduce((acc, key) => {
-            if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
-                acc[key] = params[key];
-            }
-            return acc;
-        }, {});
-        return apiClient.get('/seller/orders', { params: filteredParams });
-    },
-
-    // Get seller order by ID
-    getSellerOrderById: async (orderId) => {
-        return apiClient.get(`/seller/orders/${orderId}`);
-    },
-
-    // Update order status
-    updateOrderStatus: async (orderId, status, trackingData = {}) => {
-        return apiClient.put(`/seller/orders/${orderId}/status`, { status, ...trackingData });
-    },
-
-    // Get seller order stats
-    getSellerOrderStats: async () => {
-        return apiClient.get('/seller/orders/stats');
     }
 };
 

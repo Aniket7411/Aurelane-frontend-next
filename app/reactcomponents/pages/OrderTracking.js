@@ -292,7 +292,7 @@ const OrderTracking = () => {
                             <div className="flex justify-between pt-3 border-t">
                                 <span className="text-gray-900 font-semibold">Total Amount</span>
                                 <span className="text-emerald-600 font-bold text-xl">
-                                    ₹{order?.totalAmount?.toLocaleString() || 'N/A'}
+                                    ₹{(order?.totalAmount || order?.totalPrice || order?.total || 0).toLocaleString()}
                                 </span>
                             </div>
                         </div>
