@@ -332,24 +332,32 @@ const SellerOrders = () => {
 
                                 {/* Order Items */}
                                 <div className="mb-4 space-y-2">
-                                    {order.items?.map((item, index) => (
-                                        <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
-                                            <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                <img
-                                                    src={item.image || '/placeholder-gem.jpg'}
-                                                    alt={item.name}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                    {order.items?.map((item, index) => {
+                                        const gem = item.gem || {};
+                                        const itemImage = item.image || gem.heroImage || gem.image || gem.images?.[0] || '/placeholder-gem.jpg';
+                                        const itemName = item.name || gem.name || 'Product';
+                                        return (
+                                            <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                                                <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                    <img
+                                                        src={itemImage}
+                                                        alt={itemName}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.target.src = '/placeholder-gem.jpg';
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-sm font-medium text-gray-900 truncate">{itemName}</h4>
+                                                    <p className="text-xs text-gray-600">Qty: {item.quantity} × {formatPrice(item.price)}</p>
+                                                </div>
+                                                <p className="text-sm font-semibold text-gray-900">
+                                                    {formatPrice(item.price * item.quantity)}
+                                                </p>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="text-sm font-medium text-gray-900 truncate">{item.name}</h4>
-                                                <p className="text-xs text-gray-600">Qty: {item.quantity} × {formatPrice(item.price)}</p>
-                                            </div>
-                                            <p className="text-sm font-semibold text-gray-900">
-                                                {formatPrice(item.price * item.quantity)}
-                                            </p>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Order Footer */}
@@ -424,24 +432,32 @@ const SellerOrders = () => {
                                 <div>
                                     <h4 className="text-sm font-semibold text-gray-900 mb-3">Items</h4>
                                     <div className="space-y-3">
-                                        {selectedOrder.items?.map((item, index) => (
-                                            <div key={index} className="flex items-center space-x-4 pb-3 border-b last:border-b-0">
-                                                <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                    <img
-                                                        src={item.image || '/placeholder-gem.jpg'}
-                                                        alt={item.name}
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                        {selectedOrder.items?.map((item, index) => {
+                                            const gem = item.gem || {};
+                                            const itemImage = item.image || gem.heroImage || gem.image || gem.images?.[0] || '/placeholder-gem.jpg';
+                                            const itemName = item.name || gem.name || 'Product';
+                                            return (
+                                                <div key={index} className="flex items-center space-x-4 pb-3 border-b last:border-b-0">
+                                                    <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                        <img
+                                                            src={itemImage}
+                                                            alt={itemName}
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                e.target.src = '/placeholder-gem.jpg';
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h5 className="text-sm font-medium text-gray-900">{itemName}</h5>
+                                                        <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
+                                                        <p className="text-sm font-semibold text-gray-900 mt-1">
+                                                            {formatPrice(item.price * item.quantity)}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h5 className="text-sm font-medium text-gray-900">{item.name}</h5>
-                                                    <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
-                                                    <p className="text-sm font-semibold text-gray-900 mt-1">
-                                                        {formatPrice(item.price * item.quantity)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
