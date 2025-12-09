@@ -6,6 +6,7 @@ import { gemAPI, authAPI, orderAPI } from '../services/api';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaExclamationTriangle, FaShoppingBag, FaRupeeSign } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
+import Pagination from '../components/gems/Pagination';
 
 const SellerDashboard = () => {
     const navigate = useNavigate();
@@ -13,6 +14,15 @@ const SellerDashboard = () => {
     const [gems, setGems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        hasNext: false,
+        hasPrev: false
+    });
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(12);
     const [stats, setStats] = useState({
         totalGems: 0,
         lowStockGems: 0,
@@ -27,14 +37,57 @@ const SellerDashboard = () => {
 
     const user = authAPI.getCurrentUser();
 
+    // Fetch stats only once on mount
     useEffect(() => {
         if (!authAPI.isAuthenticated() || user?.role !== 'seller') {
             navigate('/login');
             return;
         }
-        fetchSellerGems();
+        fetchSellerStats(); // Fetch all gems for accurate stats
         fetchOrderStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Fetch paginated gems when page or limit changes
+    useEffect(() => {
+        if (!authAPI.isAuthenticated() || user?.role !== 'seller') {
+            return;
+        }
+        fetchSellerGems();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, limit]);
+
+    // Fetch all gems for accurate stats calculation
+    const fetchSellerStats = async () => {
+        try {
+            const userId = user._id || user.id;
+            // Fetch all gems without pagination for stats
+            const response = await gemAPI.getGems({ 
+                seller: userId,
+                limit: 10000 // Large limit to get all gems
+            });
+
+            if (response.success) {
+                const allGems = response.gems || response.data?.gems || [];
+                
+                // Calculate accurate stats from all gems
+                const lowStock = allGems.filter(g => g.stock && g.stock <= 5 && g.stock > 0).length;
+                const outOfStock = allGems.filter(g => !g.stock || g.stock === 0).length;
+                const totalValue = allGems.reduce((sum, g) => sum + (g.price * (g.stock || 0)), 0);
+                const totalItems = response.data?.pagination?.totalItems || response.pagination?.totalItems || allGems.length;
+
+                setStats({
+                    totalGems: totalItems,
+                    lowStockGems: lowStock,
+                    outOfStock,
+                    totalValue
+                });
+            }
+        } catch (err) {
+            console.error('Error fetching stats:', err);
+            // Don't set error state here, just log it
+        }
+    };
 
     const fetchSellerGems = async () => {
         setLoading(true);
@@ -42,23 +95,31 @@ const SellerDashboard = () => {
         try {
             // Get gems for this seller - using user.id or user._id
             const userId = user._id || user.id;
-            const response = await gemAPI.getGems({ seller: userId });
+            const response = await gemAPI.getGems({ 
+                seller: userId,
+                page: page,
+                limit: limit
+            });
 
             if (response.success) {
                 const sellerGems = response.gems || response.data?.gems || [];
                 setGems(sellerGems);
 
-                // Calculate stats
-                const lowStock = sellerGems.filter(g => g.stock && g.stock <= 5 && g.stock > 0).length;
-                const outOfStock = sellerGems.filter(g => !g.stock || g.stock === 0).length;
-                const totalValue = sellerGems.reduce((sum, g) => sum + (g.price * (g.stock || 0)), 0);
-
-                setStats({
-                    totalGems: sellerGems.length,
-                    lowStockGems: lowStock,
-                    outOfStock,
-                    totalValue
+                // Update pagination info
+                const paginationData = response.data?.pagination || response.pagination || {};
+                setPagination({
+                    currentPage: paginationData.currentPage || page,
+                    totalPages: paginationData.totalPages || 1,
+                    totalItems: paginationData.totalItems || sellerGems.length,
+                    hasNext: paginationData.hasNext || false,
+                    hasPrev: paginationData.hasPrev || false
                 });
+
+                // Update totalGems in stats from pagination (other stats come from fetchSellerStats)
+                setStats(prev => ({
+                    ...prev,
+                    totalGems: paginationData.totalItems || prev.totalGems
+                }));
             }
         } catch (err) {
             console.error('Error fetching gems:', err);
@@ -77,13 +138,28 @@ const SellerDashboard = () => {
             const response = await gemAPI.deleteGem(gemId);
             if (response.success) {
                 showSuccess('Gem deleted successfully!');
-                fetchSellerGems(); // Refresh the list
+                // If we're on the last page and it becomes empty, go to previous page
+                if (gems.length === 1 && page > 1) {
+                    setPage(page - 1);
+                } else {
+                    fetchSellerGems(); // Refresh the list
+                    fetchSellerStats(); // Refresh stats
+                }
             } else {
                 showError(response.message || 'Failed to delete gem');
             }
         } catch (error) {
             console.error('Error deleting gem:', error);
             showError(error.message || 'Failed to delete gem');
+        }
+    };
+
+    const handlePageChange = (newPage, newLimit = null) => {
+        if (newLimit && newLimit !== limit) {
+            setLimit(newLimit);
+            setPage(1); // Reset to first page when limit changes
+        } else {
+            setPage(newPage);
         }
     };
 
@@ -400,6 +476,21 @@ const SellerDashboard = () => {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                )}
+
+                {/* Pagination */}
+                {!error && gems.length > 0 && pagination.totalPages > 1 && (
+                    <div className="mt-6">
+                        <Pagination
+                            currentPage={pagination.currentPage}
+                            totalPages={pagination.totalPages}
+                            onPageChange={handlePageChange}
+                            hasNext={pagination.hasNext}
+                            hasPrev={pagination.hasPrev}
+                            totalItems={pagination.totalItems}
+                            itemsPerPage={limit}
+                        />
                     </div>
                 )}
 
