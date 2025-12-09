@@ -408,17 +408,25 @@ const SellerDashboard = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
                                                         <div className="h-10 w-10 flex-shrink-0">
-                                                            {gem.images?.[0] ? (
-                                                                <img
-                                                                    className="h-10 w-10 rounded-full object-cover"
-                                                                    src={gem.images[0]}
-                                                                    alt={gem.name}
-                                                                />
-                                                            ) : (
-                                                                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                                                                    <span>💎</span>
-                                                                </div>
-                                                            )}
+                                                            {(() => {
+                                                                // Try all possible image sources
+                                                                const imageUrl = gem.allImages?.[0] || gem.heroImage || gem.images?.[0] || gem.image;
+                                                                if (imageUrl) {
+                                                                    return (
+                                                                        <img
+                                                                            className="h-10 w-10 rounded-lg object-cover border border-gray-200"
+                                                                            src={imageUrl}
+                                                                            alt={gem.name || 'Gem'}
+                                                                        />
+                                                                    );
+                                                                }
+                                                                // If no image, show a simple placeholder (not an icon)
+                                                                return (
+                                                                    <div className="h-10 w-10 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                                                        <span className="text-xs text-gray-400">No Image</span>
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                         <div className="ml-4">
                                                             <div className="text-sm font-medium text-gray-900">{gem.name}</div>
