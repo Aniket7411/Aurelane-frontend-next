@@ -184,9 +184,9 @@ const Wishlist = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8">
                 {/* Header */}
-                <div className="mb-8">
+                <div className="mb-6 sm:mb-8">
                     <button
                         onClick={() => navigate(-1)}
                         className="flex items-center space-x-2 text-emerald-600 hover:text-emerald-700 mb-4 transition-colors"

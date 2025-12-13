@@ -303,12 +303,12 @@ const MyOrders = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 py-8">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8">
                 {/* Header */}
                 <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Orders</h1>
                         <p className="text-gray-600 mt-2">{filteredOrders.length} order(s) found</p>
                     </div>
                     <div className="flex gap-3">

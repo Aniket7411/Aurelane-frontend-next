@@ -199,6 +199,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                                 <span className="truncate">Contact</span>
                             </a>
                         ) : (
+                            <>
                             <button
                                 onClick={() => onAddToCart && onAddToCart(gem)}
                                 disabled={!gem.availability}
@@ -210,6 +211,9 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                                 <FaShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                                 <span className="truncate">{gem.availability ? 'Add to Cart' : 'Out of Stock'}</span>
                             </button>
+
+
+                            </>
                         )}
                     </div>
                 )}
