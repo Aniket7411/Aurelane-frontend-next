@@ -202,7 +202,8 @@ const Checkout = () => {
                             quantity: item.quantity,
                             price: itemPrice,
                             image: item.image || item.images?.[0] || null,
-                            name: item.name || null
+                            name: item.name || null,
+                            gstCategory: item.gstCategory || null
                         };
                     }),
                     shippingAddress: {
@@ -258,7 +259,8 @@ const Checkout = () => {
                             quantity: item.quantity,
                             price: itemPrice,
                             image: item.image || item.images?.[0] || null,
-                            name: item.name || null
+                            name: item.name || null,
+                            gstCategory: item.gstCategory || null
                         };
                     }),
                     shippingAddress: {
@@ -561,18 +563,38 @@ const Checkout = () => {
                                     <span className="text-gray-600">Subtotal</span>
                                     <span className="font-medium">{formatPrice(cartSummary.subtotal)}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Shipping</span>
-                                    <span className="font-medium">
-                                        {cartSummary.shipping === 0 ? 'Free' : formatPrice(cartSummary.shipping)}
-                                    </span>
-                                </div>
                                 {cartSummary.discount > 0 && (
                                     <div className="flex justify-between text-emerald-600">
                                         <span>Discount</span>
                                         <span className="font-medium">-{formatPrice(cartSummary.discount)}</span>
                                     </div>
                                 )}
+                                {/* GST Breakdown */}
+                                {cartSummary.gst > 0 && (
+                                    <>
+                                        {cartSummary.gstBreakdown && cartSummary.gstBreakdown.length > 0 ? (
+                                            cartSummary.gstBreakdown.map((gstGroup, index) => (
+                                                <div key={index} className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">
+                                                        GST ({gstGroup.rate}%)
+                                                    </span>
+                                                    <span className="font-medium">{formatPrice(gstGroup.amount)}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-600">GST</span>
+                                                <span className="font-medium">{formatPrice(cartSummary.gst)}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Shipping</span>
+                                    <span className="font-medium">
+                                        {cartSummary.shipping === 0 ? 'Free' : formatPrice(cartSummary.shipping)}
+                                    </span>
+                                </div>
                                 <div className="border-t pt-3">
                                     <div className="flex justify-between text-lg font-bold">
                                         <span>Total</span>

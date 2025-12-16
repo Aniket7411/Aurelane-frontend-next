@@ -11,6 +11,7 @@ import { FaHeart, FaShoppingCart, FaStar, FaArrowLeft, FaShare, FaCheck, FaTruck
 import GemCard from '../components/gems/GemCard';
 import axios from 'axios';
 import { useToast } from '../contexts/ToastContext';
+import { getGSTCategoryByValue, formatGSTRate, calculateGSTForItem } from '../utils/gstUtils';
 
 const GemDetail = () => {
     const { id } = useParams();
@@ -217,7 +218,8 @@ const GemDetail = () => {
                 sizeWeight: gem.sizeWeight,
                 sizeUnit: gem.sizeUnit,
                 stock: gem.stock,
-                quantity: quantity // Pass the quantity directly
+                quantity: quantity, // Pass the quantity directly
+                gstCategory: gem.gstCategory // Include GST category
             });
 
             // Show success feedback
@@ -341,7 +343,8 @@ const GemDetail = () => {
             sizeWeight: relatedGem.sizeWeight,
             sizeUnit: relatedGem.sizeUnit,
             stock: relatedGem.stock,
-            quantity: 1
+            quantity: 1,
+            gstCategory: relatedGem.gstCategory // Include GST category
         });
         showSuccess(
             `✨ ${relatedGem.name} added to cart!`,
@@ -585,6 +588,37 @@ const GemDetail = () => {
                                             <span className="text-lg text-gray-500 line-through">
                                                 {formatPrice(gem.price)}
                                             </span>
+                                        )}
+                                        {/* GST Information */}
+                                        {gem.gstCategory && (() => {
+                                            const gstCategory = getGSTCategoryByValue(gem.gstCategory);
+                                            const gstRate = gstCategory ? gstCategory.rate : 0;
+                                            
+                                            if (gstRate > 0) {
+                                                // Price includes GST, calculate base price
+                                                const priceWithGST = calculatePrice();
+                                                const priceBeforeGST = priceWithGST / (1 + gstRate / 100);
+                                                const gstAmount = priceWithGST - priceBeforeGST;
+                                                
+                                                return (
+                                                    <div className="mt-2 space-y-1">
+                                                        <p className="text-xs text-gray-600">
+                                                            <span className="font-medium">GST ({formatGSTRate(gstRate)}): </span>
+                                                            <span>{formatPrice(gstAmount)}</span>
+                                                            <span className="text-gray-500 ml-1">(included in price)</span>
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">
+                                                            Base Price: {formatPrice(priceBeforeGST)}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+                                        {!gem.gstCategory && (
+                                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs text-orange-700">
+                                                ⚠️ GST information not available for this gem
+                                            </div>
                                         )}
                                     </>
                                 ) : (

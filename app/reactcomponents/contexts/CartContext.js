@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { calculateGSTSummary } from '../utils/gstUtils';
 
 const CartContext = createContext();
 
@@ -129,18 +130,27 @@ export const CartProvider = ({ children }) => {
         return item ? item.quantity : 0;
     };
 
-    // Get cart summary with detailed calculations
+    // Get cart summary with detailed calculations including GST
     const getCartSummary = () => {
-        const subtotal = getTotalPrice();
+        const baseSubtotal = getTotalPrice();
         const freeShippingThreshold = 50000; // ₹50,000 for free shipping
-        const shipping = subtotal >= freeShippingThreshold ? 0 : 500; // ₹500 shipping
-        const total = subtotal + shipping;
+        
+        // Calculate GST summary
+        const gstSummary = calculateGSTSummary(cartItems);
+        
+        // Shipping is calculated on base subtotal (before GST)
+        const shipping = baseSubtotal >= freeShippingThreshold ? 0 : 500; // ₹500 shipping
+        
+        // Total includes: base subtotal + GST + shipping
+        const total = gstSummary.grandTotal + shipping;
         const itemCount = getCartItemCount();
-        const isEligibleForFreeShipping = subtotal >= freeShippingThreshold;
+        const isEligibleForFreeShipping = baseSubtotal >= freeShippingThreshold;
 
         return {
             itemCount,
-            subtotal,
+            subtotal: baseSubtotal,
+            gst: gstSummary.totalGST,
+            gstBreakdown: gstSummary.gstBreakdown,
             shipping,
             total,
             freeShippingThreshold,

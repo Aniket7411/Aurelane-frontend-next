@@ -256,6 +256,27 @@ const Cart = () => {
                                     <span className="font-medium">{formatPrice(cartSummary.subtotal)}</span>
                                 </div>
 
+                                {/* GST Breakdown */}
+                                {cartSummary.gst > 0 && (
+                                    <>
+                                        {cartSummary.gstBreakdown && cartSummary.gstBreakdown.length > 0 ? (
+                                            cartSummary.gstBreakdown.map((gstGroup, index) => (
+                                                <div key={index} className="flex justify-between text-xs sm:text-sm">
+                                                    <span className="text-gray-600">
+                                                        GST ({gstGroup.rate}%)
+                                                    </span>
+                                                    <span className="font-medium">{formatPrice(gstGroup.amount)}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="flex justify-between text-xs sm:text-sm">
+                                                <span className="text-gray-600">GST</span>
+                                                <span className="font-medium">{formatPrice(cartSummary.gst)}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
                                 <div className="flex justify-between text-sm sm:text-base">
                                     <span className="text-gray-600">Shipping</span>
                                     <span className="font-medium">

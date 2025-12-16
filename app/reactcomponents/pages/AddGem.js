@@ -7,6 +7,7 @@ import { getCategoryOptions, getSubcategoryOptions } from '../data/gemCategoryHi
 import uploadFileToCloudinary from './uploadfunctionnew';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
+import { getGSTCategories } from '../utils/gstUtils';
 
 const AddGem = () => {
     const { showSuccess, showError } = useToast();
@@ -35,7 +36,8 @@ const AddGem = () => {
         heroImage: '',
         additionalImages: [],
         contactForPrice: false,
-        birthMonth: ''
+        birthMonth: '',
+        gstCategory: ''
     });
 
     const [errors, setErrors] = useState({});
@@ -83,6 +85,7 @@ const AddGem = () => {
         () => [...new Set(gemstonesData.map(g => g.name).filter(Boolean))],
         []
     );
+    const gstCategories = useMemo(() => getGSTCategories(), []);
 
     // Helpers to make auto-fill robust for variations like "Blue Sapphire (Neelam)"
     const normalizeString = (str) => (str || '').toString().trim().toLowerCase();
@@ -308,6 +311,7 @@ const AddGem = () => {
         if (!formData.origin.trim()) newErrors.origin = 'Origin is required';
         if (!formData.deliveryDays || formData.deliveryDays <= 0) newErrors.deliveryDays = 'Valid delivery days is required';
         if (!formData.heroImage.trim()) newErrors.heroImage = 'Hero image is required';
+        if (!formData.gstCategory.trim()) newErrors.gstCategory = 'GST Category is required';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -348,7 +352,8 @@ const AddGem = () => {
                 deliveryDays: parseInt(formData.deliveryDays),
                 heroImage: formData.heroImage,
                 additionalImages: formData.additionalImages,
-                contactForPrice: formData.contactForPrice
+                contactForPrice: formData.contactForPrice,
+                gstCategory: formData.gstCategory
             };
 
             const response = await gemAPI.addGem(gemData);
@@ -380,7 +385,8 @@ const AddGem = () => {
                     origin: '',
                     deliveryDays: '',
                     heroImage: '',
-                    additionalImages: []
+                    additionalImages: [],
+                    gstCategory: ''
                 });
                 setErrors({});
                 // Optionally navigate to seller dashboard after a short delay
@@ -410,7 +416,8 @@ const AddGem = () => {
                         'deliveryDays': 'deliveryDays',
                         'heroImage': 'heroImage',
                         'additionalImages': 'additionalImages',
-                        'birthMonth': 'birthMonth'
+                        'birthMonth': 'birthMonth',
+                        'gstCategory': 'gstCategory'
                     };
 
                     const newErrors = {};
@@ -470,11 +477,12 @@ const AddGem = () => {
                     'stock': 'stock',
                     'certification': 'certification',
                     'origin': 'origin',
-                    'deliveryDays': 'deliveryDays',
-                    'heroImage': 'heroImage',
-                    'additionalImages': 'additionalImages',
-                    'birthMonth': 'birthMonth'
-                };
+                        'deliveryDays': 'deliveryDays',
+                        'heroImage': 'heroImage',
+                        'additionalImages': 'additionalImages',
+                        'birthMonth': 'birthMonth',
+                        'gstCategory': 'gstCategory'
+                    };
 
                 const newErrors = {};
                 let hasFieldErrors = false;
@@ -707,6 +715,37 @@ const AddGem = () => {
                                             <option key={month} value={month}>{month}</option>
                                         ))}
                                     </select>
+                                </div>
+
+                                {/* GST Category */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        GST Category <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        name="gstCategory"
+                                        value={formData.gstCategory}
+                                        onChange={handleInputChange}
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.gstCategory ? 'border-red-500' : 'border-gray-300'
+                                            }`}
+                                        required
+                                    >
+                                        <option value="">Select GST Category</option>
+                                        {gstCategories.map(category => (
+                                            <option key={category.value} value={category.value}>
+                                                {category.label} ({category.rate}% GST)
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Most gemstones use "Cut & Polished Loose Gemstones (2% GST)"
+                                    </p>
+                                    {formData.gstCategory && (
+                                        <p className="text-xs text-gray-600 mt-1">
+                                            {gstCategories.find(c => c.value === formData.gstCategory)?.description}
+                                        </p>
+                                    )}
+                                    {errors.gstCategory && <p className="text-red-500 text-sm mt-1">{errors.gstCategory}</p>}
                                 </div>
 
 

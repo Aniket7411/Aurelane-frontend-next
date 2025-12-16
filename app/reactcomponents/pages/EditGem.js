@@ -9,6 +9,7 @@ import { getCategoryOptions, getSubcategoryOptions } from '../data/gemCategoryHi
 import uploadFileToCloudinary from './uploadfunctionnew';
 import { FaArrowLeft, FaSave } from 'react-icons/fa';
 import { useToast } from '../contexts/ToastContext';
+import { getGSTCategories } from '../utils/gstUtils';
 
 const EditGem = () => {
     const { id: paramId } = useParams();
@@ -61,7 +62,8 @@ const EditGem = () => {
         heroImage: '',
         additionalImages: [],
         contactForPrice: false,
-        birthMonth: ''
+        birthMonth: '',
+        gstCategory: ''
     });
 
     // Astrological planets with Hindi names
@@ -130,6 +132,7 @@ const EditGem = () => {
         () => [...new Set(gemstonesData.map(g => g.name).filter(Boolean))],
         []
     );
+    const gstCategories = useMemo(() => getGSTCategories(), []);
 
     // Function to get gem data by name
     const getGemData = (name) => {
@@ -181,6 +184,7 @@ const EditGem = () => {
                     planetHindi: gem.planetHindi || '',
                     color: gem.color || '',
                     birthMonth: gem.birthMonth || '',
+                    gstCategory: gem.gstCategory || '',
                     description: gem.description || '',
                     benefits: Array.isArray(gem.benefits) ? gem.benefits : [],
                     suitableFor: Array.isArray(gem.suitableFor) ? gem.suitableFor : [],
@@ -354,6 +358,7 @@ const EditGem = () => {
                 color: gemData.color,
                 description: gemData.description,
                 birthMonth: gemData.birthMonth || null,
+                gstCategory: gemData.gstCategory || null,
                 benefits: gemData.benefits,
                 suitableFor: gemData.suitableFor,
                 price: gemData.contactForPrice ? null : parseFloat(gemData.price),
@@ -588,6 +593,36 @@ const EditGem = () => {
                                             <option key={month} value={month}>{month}</option>
                                         ))}
                                     </select>
+                                </div>
+
+                                {/* GST Category */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        GST Category
+                                    </label>
+                                    <select
+                                        name="gstCategory"
+                                        value={gemData.gstCategory || ''}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    >
+                                        <option value="">Select GST Category</option>
+                                        {gstCategories.map(category => (
+                                            <option key={category.value} value={category.value}>
+                                                {category.label} ({category.rate}% GST)
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {!gemData.gstCategory && (
+                                        <p className="text-xs text-orange-600 mt-1">
+                                            ⚠️ GST category not set. Please select one for accurate tax calculation.
+                                        </p>
+                                    )}
+                                    {gemData.gstCategory && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {gstCategories.find(c => c.value === gemData.gstCategory)?.description}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
