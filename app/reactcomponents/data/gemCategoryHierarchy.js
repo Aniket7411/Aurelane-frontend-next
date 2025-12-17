@@ -93,14 +93,23 @@ export const gemCategoryHierarchy = [
         ]
     },
     {
-        category: 'Cat\'s Eye & Hessonite',
+        category: 'Cat\'s Eye',
         subcategories: [
             'Cat\'s Eye (Lehsunia)',
             'Chrysoberyl Cat\'s Eye',
+            'Ketu Stone',
+            'Vaidurya',
+            'Other Cat\'s Eye'
+        ]
+    },
+    {
+        category: 'Hessonite',
+        subcategories: [
             'Gomed (Hessonite)',
             'Cinnamon Stone',
             'Rahu Stone',
-            'Other Cat\'s Eye/Hessonite'
+            'Gomedh',
+            'Other Hessonite'
         ]
     },
     {

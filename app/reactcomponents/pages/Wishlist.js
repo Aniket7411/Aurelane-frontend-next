@@ -252,7 +252,7 @@ const Wishlist = () => {
                                         >
                                             <FaTrash className="w-4 h-4" />
                                         </button>
-                                        {gem.discount > 0 && (
+                                        {gem.discount && Number(gem.discount) > 0 && (
                                             <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                                                 {gem.discountType === 'percentage' ? `${gem.discount}% OFF` : `₹${gem.discount} OFF`}
                                             </div>
@@ -272,14 +272,14 @@ const Wishlist = () => {
                                         {/* Price */}
                                         <div className="flex items-center space-x-2 mb-4">
                                             <span className="text-xl font-bold text-gray-900">
-                                                ₹{(gem.discount > 0
+                                                ₹{(gem.discount && Number(gem.discount) > 0
                                                     ? gem.discountType === 'percentage'
                                                         ? gem.price - (gem.price * gem.discount) / 100
                                                         : gem.price - gem.discount
                                                     : gem.price
                                                 ).toLocaleString()}
                                             </span>
-                                            {gem.discount > 0 && (
+                                            {gem.discount && Number(gem.discount) > 0 && (
                                                 <span className="text-sm text-gray-500 line-through">
                                                     ₹{gem.price.toLocaleString()}
                                                 </span>

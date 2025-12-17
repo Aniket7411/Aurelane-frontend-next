@@ -155,7 +155,7 @@ const GemDetail = () => {
 
     const calculatePrice = () => {
         if (!gem) return 0;
-        if (gem.discount && gem.discount > 0) {
+        if (gem.discount && Number(gem.discount) > 0) {
             const discountAmount = gem.discountType === 'percentage'
                 ? (gem.price * gem.discount) / 100
                 : gem.discount;
@@ -173,6 +173,7 @@ const GemDetail = () => {
             'Pearl': '🤍',
             'Coral': '🟥',
             'Gomed': '🤎',
+            'Hessonite': '🤎',
             'Cat\'s Eye': '👁️',
             'Moonstone': '🌙',
             'Turquoise': '🩵',
@@ -191,6 +192,7 @@ const GemDetail = () => {
             'Pearl': 'from-gray-100 to-gray-300',
             'Coral': 'from-red-400 to-red-600',
             'Gomed': 'from-amber-500 to-orange-600',
+            'Hessonite': 'from-amber-500 to-orange-600',
             'Cat\'s Eye': 'from-yellow-400 to-gray-500',
             'Moonstone': 'from-blue-100 to-purple-200',
             'Turquoise': 'from-cyan-400 to-teal-500',
@@ -578,13 +580,13 @@ const GemDetail = () => {
                                             <span className="text-3xl lg:text-4xl font-bold text-gray-900">
                                                 {formatPrice(calculatePrice())}
                                             </span>
-                                            {gem.discount && gem.discount > 0 && (
+                                            {gem.discount && Number(gem.discount) > 0 && (
                                                 <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs font-semibold">
                                                     {gem.discountType === 'percentage' ? `${gem.discount}% OFF` : `₹${gem.discount} OFF`}
                                                 </span>
                                             )}
                                         </div>
-                                        {gem.discount && gem.discount > 0 && (
+                                        {gem.discount && Number(gem.discount) > 0 && (
                                             <span className="text-lg text-gray-500 line-through">
                                                 {formatPrice(gem.price)}
                                             </span>
@@ -696,7 +698,13 @@ const GemDetail = () => {
                                 ) : null}
                             </div>
                             <p className="text-xs text-gray-600 font-medium">
-                                BASED ON {gem.totalReviews || gem.reviews?.length || 200}+ GOOGLE REVIEWS
+                                {(() => {
+                                    const reviewCount = gem.totalReviews || gem.reviews?.length || 0;
+                                    if (reviewCount === 0) {
+                                        return 'NEW PRODUCT - Be the first to review!';
+                                    }
+                                    return `BASED ON ${reviewCount}+ GOOGLE REVIEWS`;
+                                })()}
                             </p>
                         </div>
 

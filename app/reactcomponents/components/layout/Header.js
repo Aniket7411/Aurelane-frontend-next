@@ -24,8 +24,8 @@ const gemstoneMenuSections = [
       { label: "Diamond (Heera)", category: "Diamond" },
       { label: "Pearl (Moti)", category: "Pearl" },
       { label: "Red Coral (Moonga)", category: "Red Coral" },
-      { label: "Gomed (Hessonite)", category: "Gomed" },
       { label: "Cat's Eye (Lehsunia)", category: "Cat's Eye" },
+      { label: "Hessonite (Gomed)", category: "Hessonite" },
     ],
   },
   {

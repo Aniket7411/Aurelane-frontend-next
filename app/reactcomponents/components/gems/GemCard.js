@@ -11,7 +11,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
     const visualLabel = gem.category || gem.subcategory || gem.name;
 
     const calculatePrice = () => {
-        if (gem.discount && gem.discount > 0) {
+        if (gem.discount && Number(gem.discount) > 0) {
             const discountAmount = gem.discountType === 'percentage'
                 ? (gem.price * gem.discount) / 100
                 : gem.discount;
@@ -29,6 +29,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
             'Pearl': '🤍',
             'Coral': '🟥',
             'Gomed': '🤎',
+            'Hessonite': '🤎',
             'Cat\'s Eye': '👁️',
             'Moonstone': '🌙',
             'Turquoise': '🩵',
@@ -47,6 +48,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
             'Pearl': 'from-gray-100 to-gray-300',
             'Coral': 'from-red-400 to-red-600',
             'Gomed': 'from-amber-500 to-orange-600',
+            'Hessonite': 'from-amber-500 to-orange-600',
             'Cat\'s Eye': 'from-yellow-400 to-gray-500',
             'Moonstone': 'from-blue-100 to-purple-200',
             'Turquoise': 'from-cyan-400 to-teal-500',
@@ -82,18 +84,29 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                 </Link>
 
                 {/* Badges */}
-                <div className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 flex flex-col gap-1.5 sm:gap-2">
-                    {(gem.discount && parseFloat(gem.discount) > 0) && (
-                        <span className="bg-red-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold whitespace-nowrap">
-                            {gem.discountType === 'percentage' ? `${gem.discount}% OFF` : `${formatPrice(gem.discount)} OFF`}
-                        </span>
-                    )}
-                    {!gem.availability && (
-                        <span className="bg-gray-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold whitespace-nowrap">
-                            Out of Stock
-                        </span>
-                    )}
-                </div>
+                {(() => {
+                    const hasDiscount = gem.discount && Number(gem.discount) > 0;
+                    const isOutOfStock = !gem.availability;
+
+                    if (!hasDiscount && !isOutOfStock) return null;
+
+                    return (
+                        <div className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 flex flex-col gap-1.5 sm:gap-2 z-10">
+                            {hasDiscount && (
+                                <span className="bg-gradient-to-r from-red-500 to-red-600 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap shadow-lg">
+                                    {gem.discountType === 'percentage'
+                                        ? `${Math.round(Number(gem.discount))}% OFF`
+                                        : `${formatPrice(Number(gem.discount))} OFF`}
+                                </span>
+                            )}
+                            {isOutOfStock && (
+                                <span className="bg-gray-600 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap shadow-lg">
+                                    Out of Stock
+                                </span>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 {/* Action Buttons */}
                 <div className="absolute top-2 sm:top-3 md:top-4 right-2 sm:right-3 md:right-4 flex flex-col gap-1.5 sm:gap-2 z-10">
@@ -142,8 +155,14 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                         </div>
                     </div>
                     <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
-                        <FaStar className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-yellow-400" />
-                        <span className="text-xs sm:text-sm text-gray-600">{gem.averageRating || gem.rating || 0}</span>
+                        {(gem.averageRating || gem.rating) ? (
+                            <>
+                                <FaStar className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-yellow-400" />
+                                <span className="text-xs sm:text-sm text-gray-600">{gem.averageRating || gem.rating}</span>
+                            </>
+                        ) : (
+                            <span className="text-xs sm:text-sm font-semibold text-emerald-600 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-full">New</span>
+                        )}
                     </div>
                 </div>
 
@@ -171,7 +190,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                             <span className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
                                 {formatPrice(calculatePrice())}
                             </span>
-                            {gem.discount && gem.discount > 0 && (
+                            {gem.discount && Number(gem.discount) > 0 && (
                                 <span className="text-sm sm:text-base md:text-lg text-gray-500 line-through">
                                     {formatPrice(gem.price)}
                                 </span>
@@ -200,17 +219,17 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                             </a>
                         ) : (
                             <>
-                            <button
-                                onClick={() => onAddToCart && onAddToCart(gem)}
-                                disabled={!gem.availability}
-                                className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 md:px-4 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 ${gem.availability
-                                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 transform hover:scale-105'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    }`}
-                            >
-                                <FaShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                                <span className="truncate">{gem.availability ? 'Add to Cart' : 'Out of Stock'}</span>
-                            </button>
+                                <button
+                                    onClick={() => onAddToCart && onAddToCart(gem)}
+                                    disabled={!gem.availability}
+                                    className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 md:px-4 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 ${gem.availability
+                                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 transform hover:scale-105'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        }`}
+                                >
+                                    <FaShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                                    <span className="truncate">{gem.availability ? 'Add to Cart' : 'Out of Stock'}</span>
+                                </button>
 
 
                             </>

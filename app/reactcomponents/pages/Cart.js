@@ -187,7 +187,7 @@ const Cart = () => {
                                                         return formatPrice(price);
                                                     })()}
                                                 </span>
-                                                {item.discount > 0 && (
+                                                {item.discount && Number(item.discount) > 0 && (
                                                     <span className="text-xs sm:text-sm text-gray-500 line-through">
                                                         {formatPrice(item.price)}
                                                     </span>
