@@ -37,7 +37,8 @@ const AddGem = () => {
         additionalImages: [],
         contactForPrice: false,
         birthMonth: '',
-        gstCategory: ''
+        gstCategory: '',
+        isCustomStone: false
     });
 
     const [errors, setErrors] = useState({});
@@ -234,6 +235,15 @@ const AddGem = () => {
                     }));
                 }
             }
+
+            // Handle custom stone checkbox - clear planet when enabled
+            if (name === 'isCustomStone' && checked) {
+                setFormData(prev => ({
+                    ...prev,
+                    planet: '',
+                    planetHindi: ''
+                }));
+            }
         }
 
         // Clear error when user starts typing
@@ -297,7 +307,14 @@ const AddGem = () => {
         if (!formData.subcategory.trim()) newErrors.subcategory = 'Subcategory is required';
         if (!formData.name.trim()) newErrors.name = 'Name is required';
         if (!formData.hindiName.trim()) newErrors.hindiName = 'Hindi name is required';
-        if (!formData.planet.trim()) newErrors.planet = 'Planet is required';
+        // Planet is required only if NOT a custom stone
+        if (!formData.isCustomStone && !formData.planet.trim()) {
+            newErrors.planet = 'Planet is required (or select Custom Stone option)';
+        }
+        // Birth month is required for custom stones
+        if (formData.isCustomStone && !formData.birthMonth.trim()) {
+            newErrors.birthMonth = 'Birth month is required for custom stones';
+        }
         if (!formData.color.trim()) newErrors.color = 'Color is required';
         if (!formData.description.trim()) newErrors.description = 'Description is required';
         if (formData.benefits.length === 0) newErrors.benefits = 'At least one benefit is required';
@@ -333,8 +350,8 @@ const AddGem = () => {
                 subcategory: formData.subcategory,
                 name: formData.name,
                 hindiName: formData.hindiName,
-                planet: formData.planet,
-                planetHindi: formData.planetHindi,
+                planet: formData.isCustomStone ? null : (formData.planet || null),
+                planetHindi: formData.isCustomStone ? null : (formData.planetHindi || null),
                 color: formData.color,
                 birthMonth: formData.birthMonth || null,
                 description: formData.description,
@@ -353,7 +370,8 @@ const AddGem = () => {
                 heroImage: formData.heroImage,
                 additionalImages: formData.additionalImages,
                 contactForPrice: formData.contactForPrice,
-                gstCategory: formData.gstCategory
+                gstCategory: formData.gstCategory,
+                isCustomStone: formData.isCustomStone
             };
 
             const response = await gemAPI.addGem(gemData);
@@ -386,7 +404,8 @@ const AddGem = () => {
                     deliveryDays: '',
                     heroImage: '',
                     additionalImages: [],
-                    gstCategory: ''
+                    gstCategory: '',
+                    isCustomStone: false
                 });
                 setErrors({});
                 // Optionally navigate to seller dashboard after a short delay
@@ -646,23 +665,50 @@ const AddGem = () => {
                                     {errors.hindiName && <p className="text-red-500 text-sm mt-1">{errors.hindiName}</p>}
                                 </div>
 
+                                {/* Custom Stone Option */}
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <label className="flex items-center space-x-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            name="isCustomStone"
+                                            checked={formData.isCustomStone}
+                                            onChange={handleInputChange}
+                                            className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                                        />
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-900">
+                                                Custom Stone (No Planet) - Based on Birth Month
+                                            </span>
+                                            <p className="text-xs text-gray-600 mt-1">
+                                                Enable this for custom stones that are not associated with any planet but are linked to a birth month.
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+
                                 {/* Planet */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Planet *
+                                        Planet {!formData.isCustomStone && '*'}
                                     </label>
                                     <select
                                         name="planet"
                                         value={formData.planet}
                                         onChange={handleInputChange}
+                                        disabled={formData.isCustomStone}
                                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.planet ? 'border-red-500' : 'border-gray-300'
-                                            }`}
+                                            } ${formData.isCustomStone ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     >
                                         <option value="">Select Planet</option>
                                         {planets.map(planet => (
                                             <option key={planet.english} value={planet.english}>{planet.english}</option>
                                         ))}
                                     </select>
+                                    {formData.isCustomStone && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Planet is not required for custom stones
+                                        </p>
+                                    )}
                                     {errors.planet && <p className="text-red-500 text-sm mt-1">{errors.planet}</p>}
                                 </div>
 
@@ -699,22 +745,28 @@ const AddGem = () => {
                                     {errors.color && <p className="text-red-500 text-sm mt-1">{errors.color}</p>}
                                 </div>
 
-                                {/* Birth Month (Optional) */}
+                                {/* Birth Month */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Birth Month (Optional)
+                                        Birth Month {formData.isCustomStone && '*'}
                                     </label>
                                     <select
                                         name="birthMonth"
                                         value={formData.birthMonth}
                                         onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 border-gray-300"
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.birthMonth ? 'border-red-500' : 'border-gray-300'}`}
                                     >
-                                        <option value="">Not linked to any birth month</option>
+                                        <option value="">{formData.isCustomStone ? 'Select Birth Month *' : 'Not linked to any birth month'}</option>
                                         {birthMonths.map(month => (
                                             <option key={month} value={month}>{month}</option>
                                         ))}
                                     </select>
+                                    {formData.isCustomStone && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Required for custom stones
+                                        </p>
+                                    )}
+                                    {errors.birthMonth && <p className="text-red-500 text-sm mt-1">{errors.birthMonth}</p>}
                                 </div>
 
                                 {/* GST Category */}
