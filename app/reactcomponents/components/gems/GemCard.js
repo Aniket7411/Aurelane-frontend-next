@@ -190,7 +190,7 @@ const GemCard = ({ gem, onAddToCart, onToggleWishlist, isWishlisted = false, hid
                             <span className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
                                 {formatPrice(calculatePrice())}
                             </span>
-                            {gem.discount && Number(gem.discount) > 0 && (
+                            {gem.discount != null && Number(gem.discount) > 0 && (
                                 <span className="text-sm sm:text-base md:text-lg text-gray-500 line-through">
                                     {formatPrice(gem.price)}
                                 </span>
