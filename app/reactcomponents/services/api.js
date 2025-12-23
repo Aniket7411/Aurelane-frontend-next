@@ -2,9 +2,8 @@
 
 import axios from 'axios';
 
-// const API_BASE_URL = 'http://localhost:5000/api';
-const API_BASE_URL = 'https://aurelane-backend-next.onrender.com/api';
-
+// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL =  "https://aurelane-backend-next.onrender.com/api"
 const isBrowser = typeof window !== 'undefined';
 
 // Create axios instance
@@ -225,6 +224,54 @@ export const authAPI = {
         return response;
     },
 
+    // Admin login
+    adminLogin: async (credentials) => {
+        const response = await apiClient.post('/auth/admin/login', credentials);
+
+        // Store token in localStorage
+        if (isBrowser && response.success && response.token) {
+            window.localStorage.setItem('token', response.token);
+            window.localStorage.setItem('user', JSON.stringify(response.admin || response.user));
+        }
+
+        return response;
+    },
+
+    // Get current user from server
+    getMe: async () => {
+        return apiClient.get('/auth/me');
+    },
+
+    // Get user profile
+    getProfile: async () => {
+        return apiClient.get('/auth/profile');
+    },
+
+    // Update user profile (general)
+    updateUserProfile: async (profileData) => {
+        const response = await apiClient.put('/auth/profile', profileData);
+
+        // Update user in localStorage
+        if (isBrowser && response.success && response.data) {
+            const currentUser = authAPI.getCurrentUser();
+            const updatedUser = {
+                ...currentUser,
+                ...response.data
+            };
+            window.localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+
+        return response;
+    },
+
+    // Change password
+    changePassword: async (currentPassword, newPassword) => {
+        return apiClient.put('/auth/change-password', {
+            currentPassword,
+            newPassword
+        });
+    },
+
     // Forgot password
     forgotPassword: async (email) => {
         try {
@@ -317,9 +364,25 @@ export const authAPI = {
         return response;
     },
 
-    // Get seller dashboard stats
+    // Get seller dashboard stats (alternative endpoint)
     getSellerDashboardStats: async () => {
         return await apiClient.get('/seller/dashboard/stats');
+    },
+
+    // Get seller orders (alternative endpoint via seller route)
+    getSellerOrdersViaSeller: async (params = {}) => {
+        const filteredParams = Object.keys(params).reduce((acc, key) => {
+            if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+                acc[key] = params[key];
+            }
+            return acc;
+        }, {});
+        return apiClient.get('/seller/orders', { params: filteredParams });
+    },
+
+    // Get seller order statistics (alternative endpoint via seller route)
+    getSellerOrderStatsViaSeller: async () => {
+        return await apiClient.get('/seller/orders/stats');
     },
 
     // Update buyer profile
@@ -462,6 +525,42 @@ export const gemAPI = {
         return cachedGet(`/gems/zodiac/${zodiacSign}`, {}, {
             ttl: GEM_CATEGORY_CACHE_TTL
         });
+    },
+
+    // Get seller's gems
+    getMyGems: async () => {
+        return apiClient.get('/gems/my-gems');
+    },
+
+    // Get gem for editing
+    getGemForEdit: async (id) => {
+        return apiClient.get(`/gems/edit/${id}`);
+    },
+
+    // Get search suggestions
+    getSearchSuggestions: async (query) => {
+        const params = {};
+        if (query) {
+            params.q = query;
+            params.search = query;
+        }
+        return cachedGet('/gems/search-suggestions', { params }, {
+            ttl: 5 * 60 * 1000, // 5 minutes
+            enableCache: true
+        });
+    },
+
+    // Get gems by planet
+    getGemsByPlanet: async (planet, params = {}) => {
+        const filteredParams = Object.keys(params).reduce((acc, key) => {
+            if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+                acc[key] = params[key];
+            }
+            return acc;
+        }, {});
+        return cachedGet(`/gems/filter/planet/${planet}`, { params: filteredParams }, {
+            ttl: GEM_CATEGORY_CACHE_TTL
+        });
     }
 };
 
@@ -560,6 +659,11 @@ export const paymentAPI = {
         return apiClient.get(`/payments/order-status/${orderId}`);
     },
 
+    // Cancel pending payment order
+    cancelPendingOrder: async () => {
+        return apiClient.delete('/payments/cancel-pending-order');
+    },
+
     // Get order tracking details
     trackOrder: async (orderId) => {
         return apiClient.get(`/orders/${orderId}/track`);
@@ -648,6 +752,11 @@ export const wishlistAPI = {
     // Check if item is in wishlist
     isInWishlist: async (gemId) => {
         return apiClient.get(`/wishlist/check/${gemId}`);
+    },
+
+    // Get wishlist count
+    getWishlistCount: async () => {
+        return apiClient.get('/wishlist/count');
     }
 };
 
@@ -674,6 +783,11 @@ export const adminAPI = {
     // Update seller status (approve/reject)
     updateSellerStatus: async (sellerId, status) => {
         return apiClient.put(`/admin/sellers/${sellerId}/status`, { status });
+    },
+
+    // Verify seller
+    verifySeller: async (sellerId, isVerified) => {
+        return apiClient.put(`/admin/sellers/${sellerId}/verify`, { isVerified });
     },
 
     // Block/Unblock seller

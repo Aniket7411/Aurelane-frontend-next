@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaBox, FaShippingFast, FaCheckCircle, FaTimesCircle, FaArrowLeft, FaMapMarkerAlt, FaPhone, FaEnvelope } from 'react-icons/fa';
-import { orderAPI } from '../services/api';
+import { paymentAPI } from '../services/api';
 
 const OrderTracking = () => {
     const { orderId } = useParams();
@@ -23,7 +23,7 @@ const OrderTracking = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await orderAPI.trackOrder(orderId);
+            const response = await paymentAPI.trackOrder(orderId);
             if (response.success) {
                 setOrder(response.data || response.order);
             } else {

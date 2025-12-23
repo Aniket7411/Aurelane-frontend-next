@@ -5,10 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { FaEdit, FaSave, FaTimes, FaBox, FaTruck, FaCheckCircle, FaTimesCircle, FaArrowLeft, FaPlus, FaTrash, FaMapMarkerAlt } from 'react-icons/fa';
 import { authAPI, orderAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 const BuyerProfile = () => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
+    const { showSuccess, showError } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [loadingOrders, setLoadingOrders] = useState(false);
@@ -201,13 +203,13 @@ const BuyerProfile = () => {
             if (response.success) {
                 setUserProfile(editedProfile);
                 setIsEditingProfile(false);
-                alert('✅ Profile updated successfully!');
+                showSuccess('Profile updated successfully!');
             } else {
-                alert(response.message || 'Failed to update profile');
+                showError(response.message || 'Failed to update profile');
             }
         } catch (error) {
             console.error('Error updating profile:', error);
-            alert(error.message || 'Failed to update profile');
+            showError(error.message || 'Failed to update profile');
         } finally {
             setSaving(false);
         }
@@ -231,7 +233,7 @@ const BuyerProfile = () => {
         try {
             const response = await authAPI.addAddress(newAddress);
             if (response.success) {
-                alert('Address added successfully!');
+                showSuccess('Address added successfully!');
                 setShowAddAddress(false);
                 setNewAddress({
                     label: '',
@@ -245,11 +247,11 @@ const BuyerProfile = () => {
                 });
                 loadAddresses();
             } else {
-                alert(response.message || 'Failed to add address');
+                showError(response.message || 'Failed to add address');
             }
         } catch (error) {
             console.error('Error adding address:', error);
-            alert(error.message || 'Failed to add address');
+            showError(error.message || 'Failed to add address');
         }
     };
 
@@ -263,7 +265,7 @@ const BuyerProfile = () => {
         try {
             const response = await authAPI.updateAddress(editingAddress._id || editingAddress.id, newAddress);
             if (response.success) {
-                alert('Address updated successfully!');
+                showSuccess('Address updated successfully!');
                 setShowAddAddress(false);
                 setEditingAddress(null);
                 setNewAddress({
@@ -278,11 +280,11 @@ const BuyerProfile = () => {
                 });
                 loadAddresses();
             } else {
-                alert(response.message || 'Failed to update address');
+                showError(response.message || 'Failed to update address');
             }
         } catch (error) {
             console.error('Error updating address:', error);
-            alert(error.message || 'Failed to update address');
+            showError(error.message || 'Failed to update address');
         }
     };
 
@@ -293,14 +295,14 @@ const BuyerProfile = () => {
         try {
             const response = await authAPI.deleteAddress(addressId);
             if (response.success) {
-                alert('Address deleted successfully!');
+                showSuccess('Address deleted successfully!');
                 loadAddresses();
             } else {
-                alert(response.message || 'Failed to delete address');
+                showError(response.message || 'Failed to delete address');
             }
         } catch (error) {
             console.error('Error deleting address:', error);
-            alert(error.message || 'Failed to delete address');
+            showError(error.message || 'Failed to delete address');
         }
     };
 
@@ -308,14 +310,14 @@ const BuyerProfile = () => {
         try {
             const response = await authAPI.setPrimaryAddress(addressId);
             if (response.success) {
-                alert('Primary address updated!');
+                showSuccess('Primary address updated!');
                 loadAddresses();
             } else {
-                alert(response.message || 'Failed to set primary address');
+                showError(response.message || 'Failed to set primary address');
             }
         } catch (error) {
             console.error('Error setting primary address:', error);
-            alert(error.message || 'Failed to set primary address');
+            showError(error.message || 'Failed to set primary address');
         }
     };
 

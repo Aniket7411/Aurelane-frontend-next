@@ -5,9 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { orderAPI, authAPI } from '../services/api';
 import { FaArrowLeft, FaTruck, FaBox, FaCheckCircle, FaTimesCircle, FaEye, FaFilter, FaDownload } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import { useToast } from '../contexts/ToastContext';
 
 const SellerOrders = () => {
     const navigate = useNavigate();
+    const { showSuccess, showError, showWarning } = useToast();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -89,15 +91,15 @@ const SellerOrders = () => {
         try {
             const response = await orderAPI.updateOrderStatus(orderId, newStatus);
             if (response.success) {
-                alert(`Order status updated to ${newStatus}!`);
+                showSuccess(`Order status updated to ${newStatus}!`);
                 fetchOrders();
                 fetchOrderStats();
             } else {
-                alert(response.message || 'Failed to update order status');
+                showError(response.message || 'Failed to update order status');
             }
         } catch (error) {
             console.error('Error updating status:', error);
-            alert(error.message || 'Failed to update order status');
+            showError(error.message || 'Failed to update order status');
         } finally {
             setUpdatingStatus(null);
         }
@@ -105,7 +107,7 @@ const SellerOrders = () => {
 
     const handleShipping = async () => {
         if (!trackingNumber.trim()) {
-            alert('Please enter a tracking number');
+            showWarning('Please enter a tracking number');
             return;
         }
 
@@ -115,18 +117,18 @@ const SellerOrders = () => {
                 trackingNumber: trackingNumber.trim()
             });
             if (response.success) {
-                alert('Order marked as shipped with tracking number!');
+                showSuccess('Order marked as shipped with tracking number!');
                 setShowTrackingModal(false);
                 setTrackingNumber('');
                 setCurrentOrderId(null);
                 fetchOrders();
                 fetchOrderStats();
             } else {
-                alert(response.message || 'Failed to update order status');
+                showError(response.message || 'Failed to update order status');
             }
         } catch (error) {
             console.error('Error updating status:', error);
-            alert(error.message || 'Failed to update order status');
+            showError(error.message || 'Failed to update order status');
         } finally {
             setUpdatingStatus(null);
         }
